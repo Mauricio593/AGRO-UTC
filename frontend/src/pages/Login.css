@@ -1,0 +1,165 @@
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&display=swap');
+
+/* --- CONTENEDOR PRINCIPAL --- */
+.login-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background-color: #e2e8f0; /* Fondo gris claro neutral para que resalte la tarjeta */
+  font-family: 'Nunito', sans-serif;
+  padding: 20px;
+  box-sizing: border-box;
+  margin: 0;
+}
+
+.login-card {
+  display: flex;
+  width: 900px;
+  max-width: 100%;
+  background: #ffffff;
+  border-radius: 20px;
+  box-shadow: 0px 20px 40px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+}
+
+/* --- LADO IZQUIERDO (IMAGEN) --- */
+.login-illustration {
+  flex: 1;
+  background-color: #021a24; /* Color oscuro que combina con la imagen por si acaso */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0; /* Sin padding para que la imagen ocupe todo */
+  overflow: hidden;
+}
+
+.illustration-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover; /* Asegura que la imagen llene el espacio sin deformarse */
+}
+
+/* --- LADO DERECHO (FORMULARIO) --- */
+.login-form-section {
+  flex: 1;
+  padding: 60px 50px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+.login-form-section h2 {
+  color: #1a365d;
+  font-size: 28px;
+  margin-bottom: 40px;
+  text-align: center;
+  font-weight: 700;
+}
+
+.form-content {
+  width: 100%;
+}
+
+/* --- CAMPOS DE TEXTO --- */
+.input-group {
+  margin-bottom: 25px;
+}
+
+.input-group input {
+  width: 100%;
+  padding: 15px 20px;
+  background-color: #f1f5f9;
+  border: 2px solid transparent;
+  border-radius: 30px;
+  font-size: 16px;
+  color: #4a5568;
+  outline: none;
+  transition: all 0.3s ease;
+  box-sizing: border-box;
+  text-align: center;
+}
+
+.input-group input:focus {
+  background-color: #ffffff;
+  border-color: #1976d2; /* Azul UTC */
+  box-shadow: 0 0 8px rgba(25, 118, 210, 0.2);
+}
+
+.input-group input::placeholder {
+  color: #a0aec0;
+  font-weight: 600;
+  letter-spacing: 1px;
+}
+
+/* --- RECORDAR Y CONTRASEÑA --- */
+.form-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+  padding: 0 10px;
+}
+
+.remember-me {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #4a5568;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.forgot-password {
+  color: #4a5568;
+  font-size: 14px;
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+.forgot-password:hover {
+  color: #d32f2f; /* Rojo UTC al pasar el mouse */
+  text-decoration: underline;
+}
+
+/* --- BOTÓN PRINCIPAL --- */
+.submit-btn {
+  width: 100%;
+  padding: 16px;
+  background-color: #1976d2; /* Azul UTC */
+  color: #ffffff;
+  border: none;
+  border-radius: 30px;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  cursor: pointer;
+  transition: background-color 0.3s ease, transform 0.1s ease;
+}
+
+.submit-btn:hover {
+  background-color: #1565c0; /* Azul más oscuro al hacer hover */
+}
+
+.submit-btn:active {
+  transform: scale(0.98);
+}
+
+/* --- RESPONSIVE PARA CELULARES --- */
+@media (max-width: 768px) {
+  .login-card {
+    flex-direction: column;
+    width: 100%;
+    max-width: 450px;
+  }
+  
+  .login-illustration {
+    height: 200px; /* En celular, la imagen se mostrará arriba del formulario */
+    flex: none;
+  }
+  
+  .login-form-section {
+    padding: 40px 30px;
+  }
+}

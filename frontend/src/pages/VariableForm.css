@@ -1,0 +1,185 @@
+.page-container {
+  background-color: #ffffff; /* Un azul/celeste muy suave y alegre de fondo */
+  min-height: 100vh;
+  padding-bottom: 60px;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.main-container {
+  max-width: 900px;
+  margin: 25px auto;
+  padding: 0 20px;
+}
+
+/* Encabezado y botón regresar */
+.header-container {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.header-container h3 {
+  margin: 0;
+  color: #0277bd; /* Azul profesional y vivo */
+  font-size: 24px;
+}
+
+.btn-back {
+  background-color: #0288d1;
+  color: white;
+  border: none;
+  padding: 8px 15px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 14px;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.btn-back:hover {
+  background-color: #01579b;
+  transform: translateY(-1px);
+}
+
+/* Tabla Estilo SQL Alegre */
+.table-wrapper {
+  background-color: white;
+  border: 1px solid #f3f7f8;
+  border-radius: 8px;
+  margin-bottom: 25px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+  
+  /* --- MAGIA DEL SCROLL --- */
+  max-height: 350px; 
+  overflow-y: auto;  
+}
+
+.sql-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.sql-table th {
+  background-color: #ffffff; 
+  color: rgb(20, 20, 20);
+  padding: 12px;
+  text-align: left;
+  border: 1px solid #01579b;
+  
+  /* --- CABECERA CONGELADA --- */
+  position: sticky; 
+  top: 0;           
+  z-index: 1;       
+  box-shadow: 0 2px 2px rgba(0,0,0,0.1); 
+}
+
+.sql-table td {
+  padding: 10px 12px;
+  border: 1px solid #e0e0e0;
+  color: #333;
+}
+
+.sql-table tr:nth-child(even) {
+  background-color: #f1f8e9; /* Un verde súper clarito para filas pares */
+}
+
+.sql-table tr:nth-child(odd) {
+  background-color: #ffffff;
+}
+
+.sql-table tr:hover {
+  background-color: #c2e990 !important; /* Celeste al pasar el mouse */
+}
+
+.row-selected {
+  background-color: #092735 !important; /* Celeste más intenso al seleccionar */
+  color: white !important;
+}
+
+.row-selected td {
+  color: #000;
+  font-weight: 500;
+}
+
+.valor-destacado {
+  font-weight: bold;
+  color: #d84315; /* Un tono naranja/rojo alegre para resaltar el valor */
+  font-size: 15px;
+}
+
+/* Formulario Inferior */
+.form-card {
+  background-color: white;
+  border: 1px solid hsl(0, 0%, 100%);
+  padding: 25px;
+  border-radius: 8px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 100px 1fr 100px 1fr;
+  gap: 15px;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.form-label {
+  text-align: right;
+  font-weight: 600;
+  color: #0253bd;
+}
+
+.form-input {
+  width: 100%;
+  padding: 10px;
+  border: 2px solid #fababa;
+  border-radius: 6px;
+  font-size: 14px;
+  outline: none;
+  transition: all 0.3s ease;
+}
+
+.form-input:focus {
+  border-color: #d10202;
+  box-shadow: 0 0 8px rgb(228, 148, 148);
+}
+
+/* Botones de acción */
+.action-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 15px;
+  border-top: 2px dashed #0f0f0f;
+  padding-top: 20px;
+}
+
+.btn {
+  padding: 2px 2px;
+  border: none;
+  border-radius: 6px;
+  color: rgb(13, 14, 13);
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 14px;
+  min-width: 90px;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.btn:active {
+  transform: translateY(0);
+}
+
+.btn-add { background-color: #43a047; } /* Verde alegre */
+.btn-update { background-color: #fb8c00; } /* Naranja vivo para actualizar */
+.btn-delete { background-color: #e53935; } /* Rojo vivo */
+.btn-clear { background-color: #757575; } /* Gris neutro */

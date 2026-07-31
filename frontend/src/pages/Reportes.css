@@ -1,0 +1,174 @@
+/* =========================================
+   CONTENEDOR GENERAL
+   ========================================= */
+.reportes-container {
+  padding: 10px;
+  max-width: 1200px;
+  margin: 0 auto;
+  font-family: Arial, sans-serif;
+  background-color: #f8fafc;
+}
+
+.header-actions {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 15px;
+}
+
+.btn-regresar, .btn-exportar {
+  padding: 8px 12px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 13px;
+}
+
+.btn-regresar { background-color: #64748b; color: white; }
+.btn-exportar { background-color: #ef4444; color: white; }
+
+.filters-bar {
+  display: flex;
+  gap: 15px;
+  background: white;
+  padding: 10px 15px;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  margin-bottom: 15px;
+}
+
+.filter-group { display: flex; flex-direction: column; flex: 1; }
+.filter-group label { font-size: 0.8rem; font-weight: bold; margin-bottom: 3px; }
+.filter-group select { padding: 6px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 12px; }
+
+/* =========================================
+   ESTRUCTURA DEL REPORTE PARA PDF
+   ========================================= */
+.report-body {
+  background: white;
+  padding: 0;
+  width: 100%; 
+}
+
+.variable-page {
+  padding: 10px; 
+  background: white;
+  width: 100%;
+  box-sizing: border-box;
+  page-break-inside: avoid;
+}
+
+.report-header-title {
+  margin-bottom: 8px;
+  text-align: center;
+}
+
+.report-header-title h2 {
+  font-size: 13px;
+  font-weight: bold;
+  margin: 2px 0;
+  text-transform: uppercase;
+}
+
+.report-header-title p {
+  font-size: 11px;
+  margin: 2px 0;
+  color: #333;
+}
+
+.section-title {
+  font-size: 12px;
+  font-weight: bold;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+  color: #0f172a;
+}
+
+/* Cambio crítico: Flexbox en lugar de Grid para mejor renderizado en PDF */
+.flex-layout {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  width: 100%;
+}
+
+/* =========================================
+   TABLAS Y TEXTOS (COLUMNA IZQUIERDA)
+   ========================================= */
+.data-tables-col {
+  width: 53%; /* Toma un poco más de la mitad para las tablas */
+  padding-right: 15px;
+  box-sizing: border-box;
+}
+
+.table-wrapper h4, .best-treatment-box h4, .charts-col h4 {
+  font-size: 10px;
+  font-weight: bold;
+  margin: 0 0 4px 0;
+  text-transform: uppercase;
+  color: #1e293b;
+}
+
+.scientific-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 9px; 
+  margin-bottom: 8px;
+}
+
+.scientific-table th, .scientific-table td {
+  border-bottom: 1px solid #ccc;
+  padding: 3px 2px;
+  text-align: center;
+}
+
+.scientific-table th {
+  border-top: 1px solid #ccc;
+  font-weight: bold;
+  background-color: #f1f5f9;
+}
+
+.scientific-table .text-left { text-align: left; }
+.scientific-table .fw-bold { font-weight: bold; }
+
+.best-treatment-box { 
+  margin-top: 10px; 
+  background-color: #f8fafc;
+  border-left: 3px solid #3498DB;
+  padding: 8px;
+}
+
+.best-content { 
+  font-size: 10px; 
+  line-height: 1.3; 
+  color: #334155;
+  text-align: justify;
+}
+
+/* =========================================
+   GRÁFICOS (COLUMNA DERECHA)
+   ========================================= */
+.charts-col {
+  width: 45%; /* Espacio estricto para gráficos */
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  box-sizing: border-box;
+}
+
+.chart-box {
+  margin-bottom: 5px;
+  padding: 5px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  background-color: #ffffff;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Contenedor que limita el crecimiento del gráfico */
+.chart-canvas {
+  height: 140px; 
+  width: 100%;
+  position: relative;
+}

@@ -1,0 +1,179 @@
+/* Contenedor general */
+.page-container {
+  min-height: 100vh;
+  background-color: #f8fafc;
+}
+
+.main-container {
+  padding: 30px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* Cabecera */
+.header-container {
+  background-color: #ffffff;
+  padding: 20px 25px;
+  border-radius: 10px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+  border: 1px solid #e2e8f0;
+  margin-bottom: 25px;
+}
+
+.header-container h3 {
+  margin: 0;
+  color: #1e293b;
+  font-size: 22px;
+  text-transform: capitalize;
+}
+
+/* Tarjetas y Contenedores */
+.form-card {
+  background-color: #ffffff;
+  padding: 25px;
+  border-radius: 10px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e2e8f0;
+  margin-bottom: 25px;
+}
+
+.grid-filters {
+  display: flex;
+  gap: 15px;
+  flex-wrap: wrap;
+}
+
+.filter-item {
+  flex: 1 1 22%;
+  min-width: 180px;
+}
+
+.form-label {
+  display: block;
+  font-weight: 600;
+  color: #475569;
+  font-size: 14px;
+  margin-bottom: 6px;
+}
+
+.form-input {
+  width: 100%;
+  padding: 10px;
+  border-radius: 6px;
+  border: 1px solid #cbd5e1;
+  background-color: #ffffff;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.form-input:focus {
+  border-color: #3b82f6;
+}
+
+/* Botones */
+.action-buttons {
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
+  gap: 15px;
+}
+
+.btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 6px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.btn-add {
+  background-color: #0277bd;
+  color: white;
+}
+
+.btn-add:hover {
+  background-color: #01579b;
+}
+
+.btn-add:disabled {
+  background-color: #94a3b8;
+  cursor: not-allowed;
+}
+
+/* Resumen del reporte */
+.resumen-card {
+  text-align: center;
+  border-left: 5px solid #d32f2f;
+  background-color: #fffafa;
+}
+
+/* Tabla mejorada */
+.table-wrapper {
+  overflow-x: auto;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}
+
+.sql-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  background-color: #ffffff;
+}
+
+.sql-table th {
+  background-color: #f1f5f9;
+  color: #475569;
+  font-weight: 600;
+  padding: 12px;
+  text-align: left;
+  border-bottom: 2px solid #e2e8f0;
+}
+
+.sql-table td {
+  padding: 12px;
+  border-bottom: 1px solid #e2e8f0;
+  color: #334155;
+}
+
+/* Panel de Diagnóstico Detallado */
+.anomaly-diagnostic-panel {
+  margin-top: 25px;
+}
+
+.diagnostic-card {
+  background-color: #fffaf0;
+  border: 1px solid #feebc8;
+  border-left: 5px solid #dd6b20;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 15px;
+}
+
+.diagnostic-card h4 {
+  margin: 0 0 10px 0;
+  color: #dd6b20;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.diagnostic-list {
+  margin: 0;
+  padding-left: 20px;
+  font-size: 14px;
+  color: #7b341e;
+  line-height: 1.6;
+}
+
+.diagnostic-list li {
+  margin-bottom: 8px;
+}
+
+/* Contenedor Gráfico */
+.chart-container {
+  margin-top: 25px;
+  height: 380px;
+}

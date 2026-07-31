@@ -1,0 +1,124 @@
+/* Contenedor principal dividido */
+.layout-split-container {
+  display: flex;
+  flex-direction: row; /* Coloca los elementos uno al lado del otro */
+  gap: 20px;
+  padding: 20px;
+  max-width: 1400px;
+  margin: 0 auto;
+  align-items: flex-start; /* Evita que se estiren verticalmente si no es necesario */
+}
+
+/* Lado izquierdo (Panel de trabajo) - 75% del espacio */
+.workspace-left {
+  flex: 3;
+  min-width: 0; /* Evita desbordamientos en flexbox */
+}
+
+/* Lado derecho (Filtros) - 25% del espacio */
+.sidebar-right {
+  flex: 1;
+  background-color: #f8f9fa;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+}
+
+.workspace-empty {
+  text-align: center;
+  padding: 60px 20px;
+  border: 2px dashed #b0bec5;
+  border-radius: 8px;
+  color: #546e7a;
+  background-color: #eceff1;
+}
+
+/* Estilos de la barra lateral */
+.sidebar-title {
+  margin-top: 0;
+  color: #0277bd;
+  border-bottom: 2px solid #b3e5fc;
+  padding-bottom: 10px;
+  margin-bottom: 20px;
+}
+
+.filter-box-vertical {
+  margin-bottom: 15px;
+}
+
+.filter-box-vertical label {
+  display: block;
+  font-weight: bold;
+  color: #37474f;
+  margin-bottom: 5px;
+  font-size: 14px;
+}
+
+.select-row {
+  display: flex;
+  gap: 8px;
+}
+
+.select-row select {
+  flex: 1;
+  padding: 8px;
+  border: 1px solid #cfd8dc;
+  border-radius: 4px;
+}
+
+.select-row button {
+  background-color: #4caf50;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  width: 35px;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 18px;
+}
+
+.select-row button:disabled {
+  background-color: #b0bec5;
+  cursor: not-allowed;
+}
+
+.btn-iniciar-carga {
+  width: 100%;
+  padding: 12px;
+  background-color: #2e7d32;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-weight: bold;
+  font-size: 16px;
+  margin-top: 15px;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.btn-iniciar-carga:hover {
+  background-color: #1b5e20;
+}
+
+/* Menú Contextual (Clic derecho) */
+.floating-context-menu {
+  position: absolute;
+  background: white;
+  border: 1px solid #ccc;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+  border-radius: 6px;
+  z-index: 9999;
+  min-width: 150px;
+  overflow: hidden;
+}
+
+.context-option-row {
+  padding: 10px 15px;
+  cursor: pointer;
+  font-size: 14px;
+  border-bottom: 1px solid #eee;
+}
+
+.context-option-row:hover { background-color: #f1f8e9; }
+.delete-option:hover { background-color: #ffebee; color: #d32f2f; }

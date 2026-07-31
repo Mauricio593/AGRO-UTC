@@ -1,0 +1,108 @@
+/* RegisterData.css */
+
+.register-container {
+  padding: 20px;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.btn-back {
+  background-color: transparent;
+  color: #333;
+  border: 1px solid #ccc;
+  padding: 8px 15px;
+  border-radius: 5px;
+  cursor: pointer;
+  margin-bottom: 20px;
+  font-size: 14px;
+  font-weight: bold;
+  display: block;
+}
+
+.btn-back:hover {
+  background-color: #f8f9fa;
+}
+
+.form-group {
+  margin-bottom: 20px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.input-field {
+  padding: 8px;
+  border-radius: 5px;
+  border: 1px solid #ccc;
+  flex-grow: 1;
+}
+
+.btn-submit {
+  padding: 8px 15px;
+  cursor: pointer;
+  border-radius: 5px;
+  background-color: #28a745;
+  color: white;
+  border: none;
+  font-weight: bold;
+}
+
+.btn-submit.edit {
+  background-color: #ffc107;
+  color: black;
+}
+
+.btn-cancel {
+  padding: 8px 15px;
+  cursor: pointer;
+  border-radius: 5px;
+  background-color: #6c757d;
+  color: white;
+  border: none;
+}
+
+.variable-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: white;
+  padding: 10px;
+  margin: 10px 0;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+}
+
+.variable-name {
+  cursor: pointer;
+  font-weight: 500;
+  flex-grow: 1;
+  color: #2e7d32;
+  text-transform: capitalize;
+}
+
+.variable-name:hover {
+  text-decoration: underline;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 10px;
+}
+
+.btn-edit {
+  background: #ffc107;
+  color: black;
+  border: none;
+  padding: 5px 10px;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.btn-delete {
+  background: #dc3545;
+  color: white;
+  border: none;
+  padding: 5px 10px;
+  cursor: pointer;
+  border-radius: 4px;
+}
