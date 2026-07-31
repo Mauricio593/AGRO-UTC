@@ -27,7 +27,7 @@ function Login() {
   const handleLogin = async (e) => {
     e.preventDefault();
     try {
-      const res = await axios.post("http://127.0.0.1:8000/api/token/", { 
+      const res = await axios.post("https://agro-utc.onrender.com/api/token/", { 
         username, 
         password 
       });
@@ -35,9 +35,9 @@ function Login() {
       localStorage.setItem("token", res.data.access);
       localStorage.setItem("username", username); 
       
-      // 🚀 NUEVO: Buscamos el rol del usuario y lo guardamos
+      // Buscamos el rol del usuario y lo guardamos
       try {
-        const usersRes = await axios.get("http://127.0.0.1:8000/api/usuarios/");
+        const usersRes = await axios.get("https://agro-utc.onrender.com/api/usuarios/");
         const currentUser = usersRes.data.find(u => u.username === username);
         if (currentUser) {
           localStorage.setItem("rol", currentUser.rol);
@@ -55,7 +55,7 @@ function Login() {
   const handleRegister = async (e) => {
     e.preventDefault();
     try {
-      await axios.post("http://127.0.0.1:8000/api/registro/", { 
+      await axios.post("https://agro-utc.onrender.com/api/registro/", { 
         username, 
         email,
         password,
