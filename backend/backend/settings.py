@@ -25,7 +25,9 @@ SECRET_KEY = 'django-insecure-lxlnwcg(b^&0o5eev_nf2qt=(xs=2gen=j%#!i@wj%=i5brlv&
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+# backend/backend/settings.py (Línea 28)
+
+ALLOWED_HOSTS = ['agro-utc.onrender.com', 'localhost', '127.0.0.1']
 
 
 # Application definition
