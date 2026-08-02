@@ -25,7 +25,6 @@ urlpatterns = [
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     
     # 4. Rutas de la aplicación 'core'
-    # Si en core/urls.py NO usas el prefijo 'api/', usa: path('api/', include('core.urls'))
-    # Si en core/urls.py SÍ usas el prefijo 'api/', usa: path('', include('core.urls'))
+    # Agregamos el prefijo 'api/' para que coincida con las peticiones de React
     path('api/', include('core.urls')), 
 ]

@@ -2,7 +2,7 @@ import axios from "axios";
 
 const API = axios.create({
   // URL actualizada para apuntar a tu servidor de producción en Render
-  baseURL: "https://agro-utc.onrender.com/api/", 
+  baseURL: "https://agro-utc.onrender.com/", 
 });
 
 // Interceptor: pega el token en cada petición automáticamente
