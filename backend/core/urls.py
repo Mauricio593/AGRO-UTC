@@ -15,7 +15,6 @@ from .views import (
     registrar_usuario,
     eliminar_usuario,
     listar_usuarios,
-    # 📊 AGREGAMOS LAS NUEVAS FUNCIONES DE REPORTES Y ACCESOS AQUÍ:
     gestionar_accesos,
     datos_grafico_reporte
 )
@@ -30,23 +29,23 @@ router.register(r'valores', ValorViewSet)
 router.register(r'tratamientos', TratamientoViewSet)
 
 urlpatterns = [
-    # Incluimos todas las rutas automáticas del router bajo el prefijo 'api/'
-    path('api/', include(router.urls)),
+    # Incluimos todas las rutas automáticas del router SIN el prefijo 'api/'
+    path('', include(router.urls)),
     
-    # RUTAS PERSONALIZADAS
-    path('api/analisis/', analisis_variable),
-    path('api/comparar/', comparacion_anios),
-    path('api/knn/', knn_prediccion),
+    # RUTAS PERSONALIZADAS SIN EL PREFIJO 'api/'
+    path('analisis/', analisis_variable),
+    path('comparar/', comparacion_anios),
+    path('knn/', knn_prediccion),
     
     # NUEVA RUTA PARA DETECCIÓN DE ANOMALÍAS:
-    path('api/knn-anomalias-existentes/', detectar_anomalias_existentes),
+    path('knn-anomalias-existentes/', detectar_anomalias_existentes),
     
     # 👥 NUEVAS RUTAS PARA REGISTRO Y SEGURIDAD DE USUARIOS:
-    path('api/registro/', registrar_usuario),
-    path('api/usuarios/', listar_usuarios),
-    path('api/usuarios/<int:pk>/', eliminar_usuario),
+    path('registro/', registrar_usuario),
+    path('usuarios/', listar_usuarios),
+    path('usuarios/<int:pk>/', eliminar_usuario),
 
     # 📊 NUEVAS RUTAS PARA EL MÓDULO DE REPORTES Y ACCESOS:
-    path('api/accesos/', gestionar_accesos),
-    path('api/reporte-grafico/', datos_grafico_reporte),
+    path('accesos/', gestionar_accesos),
+    path('reporte-grafico/', datos_grafico_reporte),
 ]
