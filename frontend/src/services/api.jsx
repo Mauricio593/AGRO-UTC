@@ -1,11 +1,11 @@
 import axios from "axios";
 
 const API = axios.create({
-  // Asegúrate de que termine en .com/ y NO en .com/api/
-  baseURL: "https://agro-utc.onrender.com/", 
+  // 🔥 AQUÍ ESTÁ LA MAGIA: Agregamos api/ al final de la URL base
+  baseURL: "https://agro-utc.onrender.com/api/", 
 });
 
-// Interceptor para inyectar el token de autenticación (si lo tienes configurado)
+// Si tienes interceptores para tokens, déjalos tal cual los tienes
 API.interceptors.request.use((config) => {
   const token = localStorage.getItem("token");
   if (token) {
