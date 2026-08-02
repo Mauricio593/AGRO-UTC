@@ -5,7 +5,7 @@ import html2pdf from "html2pdf.js";
 import Navbar from "../components/Navbar";
 import "./Reportes.css";
 
-import { Bar, Chart, Pie, Line, Scatter } from "react-chartjs-2";
+import { Bar, Line } from "react-chartjs-2";
 import {
   Chart as ChartJS, CategoryScale, LinearScale, BarElement, LineElement, 
   Title, Tooltip, Legend, PointElement, ArcElement
@@ -52,26 +52,30 @@ function Reportes() {
   const [datosGraficos, setDatosGraficos] = useState([]);
   const [nombreUsuario, setNombreUsuario] = useState("Usuario");
 
-  const [grafico1, setGrafico1] = useState('sectores');
-  const [grafico2, setGrafico2] = useState('lineas');
-
   useEffect(() => {
     const usuarioGuardado = localStorage.getItem("username");
     if (usuarioGuardado) setNombreUsuario(usuarioGuardado);
   }, []);
 
-  // Cargar Cultivos
+  // 1. Cargar Cultivos (con ajuste de paginación de Django)
   useEffect(() => {
     API.get("cultivos/")
-      .then(res => setCultivos(res.data))
+      .then(res => {
+        // Extraemos los datos dependiendo de si Django usa paginación o no
+        const data = res.data.results || res.data;
+        setCultivos(data);
+      })
       .catch(err => console.error("Error al cargar cultivos", err));
   }, []);
 
-  // Cargar Lotes dependiendo del cultivo
+  // 2. Cargar Lotes dependiendo del cultivo
   useEffect(() => {
     if (filtro.cultivo) {
       API.get(`unidades/?cultivo=${filtro.cultivo}`)
-        .then(res => setLotes(res.data))
+        .then(res => {
+          const data = res.data.results || res.data;
+          setLotes(data);
+        })
         .catch(console.error);
     } else {
       setLotes([]); 
@@ -79,11 +83,14 @@ function Reportes() {
     }
   }, [filtro.cultivo]);
 
-  // Cargar Años dependiendo del lote
+  // 3. Cargar Años dependiendo del lote
   useEffect(() => {
     if (filtro.lote) {
       API.get(`experimentos/?unidad=${filtro.lote}`)
-        .then(res => setAnios(res.data))
+        .then(res => {
+          const data = res.data.results || res.data;
+          setAnios(data);
+        })
         .catch(console.error);
     } else {
       setAnios([]); 
@@ -91,7 +98,7 @@ function Reportes() {
     }
   }, [filtro.lote]);
 
-  // Generar reporte al cambiar filtros
+  // 4. Generar reporte al cambiar filtros
   useEffect(() => {
     if (!filtro.cultivo) {
       setDatosGraficos([]);
@@ -104,6 +111,7 @@ function Reportes() {
         if (filtro.anio) url += `&anio=${filtro.anio}`;
 
         const res = await API.get(url);
+        // Aquí no usamos .results porque tu vista personalizada devuelve la lista directo
         setDatosGraficos(res.data);
       } catch (error) {
         console.error("Error obteniendo datos del reporte:", error);
@@ -129,27 +137,32 @@ function Reportes() {
       <Navbar />
       <div className="reportes-container">
         
-        <div className="reportes-header">
-          <h2>📊 Panel de Reportes y Análisis</h2>
-          <p>Bienvenido, <strong>{nombreUsuario}</strong>. Selecciona los parámetros para visualizar el comportamiento de las variables.</p>
+        <div className="header-actions">
+          <div>
+            <h2 className="section-title">📊 Panel de Reportes y Análisis</h2>
+            <p style={{ fontSize: "12px", color: "#64748b" }}>
+              Bienvenido, <strong>{nombreUsuario}</strong>. Selecciona los parámetros para visualizar el comportamiento.
+            </p>
+          </div>
         </div>
 
-        <div className="filtros-card">
-          <div className="filtro-grupo">
+        {/* AQUÍ ESTÁ EL CAMBIO CLAVE: Usamos las clases de tu CSS (filters-bar, filter-group) */}
+        <div className="filters-bar">
+          <div className="filter-group">
             <label>Cultivo:</label>
             <select value={filtro.cultivo} onChange={e => setFiltro({ ...filtro, cultivo: e.target.value, lote: "", anio: "" })}>
               <option value="">-- Seleccionar --</option>
               {cultivos.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
             </select>
           </div>
-          <div className="filtro-grupo">
+          <div className="filter-group">
             <label>Lote:</label>
             <select value={filtro.lote} disabled={!filtro.cultivo} onChange={e => setFiltro({ ...filtro, lote: e.target.value, anio: "" })}>
               <option value="">-- Todos --</option>
               {lotes.map(l => <option key={l.id} value={l.id}>{l.nombre}</option>)}
             </select>
           </div>
-          <div className="filtro-grupo">
+          <div className="filter-group">
             <label>Año:</label>
             <select value={filtro.anio} disabled={!filtro.lote} onChange={e => setFiltro({ ...filtro, anio: e.target.value })}>
               <option value="">-- Todos --</option>
@@ -163,72 +176,61 @@ function Reportes() {
 
         <div id="reporte-contenido" className="reporte-resultados">
           {datosGraficos.length === 0 ? (
-            <div className="no-data-msg">
+            <div style={{ padding: "20px", textAlign: "center", backgroundColor: "white", borderRadius: "8px" }}>
               <p>No hay datos disponibles para los filtros seleccionados o no has seleccionado un cultivo.</p>
             </div>
           ) : (
             datosGraficos.map((dato, index) => (
-              <div key={index} className="grafico-seccion">
-                <h3 className="variable-titulo">Variabilidad de: {dato.variable}</h3>
+              <div key={index} className="variable-page">
+                <h3 className="section-title">Variabilidad de: {dato.variable}</h3>
                 
-                <div className="graficos-grid">
-                  <div className="grafico-card">
-                    <h4>Distribución de Tratamientos</h4>
-                    <Bar 
-                      data={{
-                        labels: dato.tratamientos,
-                        datasets: [{
-                          label: 'Promedio',
-                          data: dato.promedios,
-                          backgroundColor: 'rgba(54, 162, 235, 0.6)',
-                          borderColor: 'rgba(54, 162, 235, 1)',
-                          borderWidth: 1,
-                        }]
-                      }} 
-                      options={{ responsive: true, plugins: { legend: { display: false } } }} 
-                    />
+                <div className="flex-layout">
+                  <div className="data-tables-col">
+                    <div className="table-wrapper">
+                      <h4>Resumen Estadístico</h4>
+                      <table className="scientific-table">
+                        <thead>
+                          <tr>
+                            <th>Tratamiento</th>
+                            <th>Promedio</th>
+                            <th>N° Mediciones</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {dato.tratamientos && dato.tratamientos.map((trat, i) => (
+                            <tr key={i}>
+                              <td className="text-left">{trat}</td>
+                              <td>{dato.promedios[i] ? dato.promedios[i].toFixed(2) : 0.00}</td>
+                              <td>{dato.conteos ? dato.conteos[i] : 'N/A'}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
 
-                  <div className="grafico-card">
-                    <h4>Tendencia General</h4>
-                    <Line 
-                      data={{
-                        labels: dato.tratamientos,
-                        datasets: [{
-                          label: 'Tendencia',
-                          data: dato.promedios,
-                          fill: false,
-                          borderColor: '#ff6384',
-                          tension: 0.1
-                        }]
-                      }} 
-                      options={{ responsive: true }} 
-                    />
+                  <div className="charts-col">
+                    <div className="chart-box">
+                      <h4>Distribución de Tratamientos</h4>
+                      <div className="chart-canvas">
+                        <Bar 
+                          data={{
+                            labels: dato.tratamientos,
+                            datasets: [{
+                              label: 'Promedio',
+                              data: dato.promedios,
+                              backgroundColor: 'rgba(54, 162, 235, 0.6)',
+                              borderColor: 'rgba(54, 162, 235, 1)',
+                              borderWidth: 1,
+                            }]
+                          }} 
+                          options={{ maintainAspectRatio: false, plugins: { legend: { display: false } } }} 
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
-
-                <div className="tabla-resumen">
-                  <h4>Resumen Estadístico</h4>
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>Tratamiento</th>
-                        <th>Promedio</th>
-                        <th>N° Mediciones</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {dato.tratamientos.map((trat, i) => (
-                        <tr key={i}>
-                          <td>{trat}</td>
-                          <td>{dato.promedios[i].toFixed(2)}</td>
-                          <td>{dato.conteos ? dato.conteos[i] : 'N/A'}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-                <hr className="separador-graficos" />
+                <hr style={{ borderTop: "1px solid #e5e7eb", margin: "15px 0" }} />
               </div>
             ))
           )}
