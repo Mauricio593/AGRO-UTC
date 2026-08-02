@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import axios from "axios";
+import API from "../services/api"; // Importación centralizada
 import { useNavigate } from "react-router-dom";
 
 // Importamos la imagen desde la carpeta api
@@ -27,7 +27,8 @@ function Login() {
   const handleLogin = async (e) => {
     e.preventDefault();
     try {
-      const res = await axios.post("https://agro-utc.onrender.com/api/token/", { 
+      // Uso de API centralizada
+      const res = await API.post("token/", { 
         username, 
         password 
       });
@@ -37,7 +38,7 @@ function Login() {
       
       // Buscamos el rol del usuario y lo guardamos
       try {
-        const usersRes = await axios.get("https://agro-utc.onrender.com/api/usuarios/");
+        const usersRes = await API.get("usuarios/");
         const currentUser = usersRes.data.find(u => u.username === username);
         if (currentUser) {
           localStorage.setItem("rol", currentUser.rol);
@@ -55,7 +56,8 @@ function Login() {
   const handleRegister = async (e) => {
     e.preventDefault();
     try {
-      await axios.post("https://agro-utc.onrender.com/api/registro/", { 
+      // Uso de API centralizada
+      await API.post("registro/", { 
         username, 
         email,
         password,

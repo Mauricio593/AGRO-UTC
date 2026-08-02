@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
-import { getAuthHeaders } from "../services/auth";
+import API from "../services/api"; // Importación centralizada
 import Navbar from "../components/Navbar";
 
 // Importación del CSS separado
@@ -15,31 +14,21 @@ import autoTable from "jspdf-autotable";
 ChartJS.register(BarElement, CategoryScale, LinearScale, Tooltip, Legend);
 
 function KNN() {
-  // 1. Estado para almacenar los IDs y selecciones exactas
   const [filtros, setFiltros] = useState({ cultivoId: "", loteId: "", anio: "", variable: "" });
-  
-  // 2. Estado para almacenar las listas de datos que vienen del backend
   const [listas, setListas] = useState({ cultivos: [], lotes: [], anios: [], variables: [] });
   
   const [reporte, setReporte] = useState(null);
   const [loading, setLoading] = useState(false);
   const [grafica, setGrafica] = useState(null);
 
-  // ==========================================================
-  // LÓGICA DE CARGA EN CASCADA (RELACIONAL)
-  // ==========================================================
-
   // A. Cargar Cultivos y Variables al abrir la pantalla
   useEffect(() => {
-    const headers = getAuthHeaders();
-    
-    axios.get('http://127.0.0.1:8000/api/cultivos/', headers)
+    API.get('cultivos/')
       .then(res => setListas(prev => ({ ...prev, cultivos: res.data })))
       .catch(err => console.error("Error cargando cultivos:", err));
 
-    axios.get('http://127.0.0.1:8000/api/variables/', headers)
+    API.get('variables/')
       .then(res => {
-        // CORRECCIÓN: Filtramos para mantener los objetos únicos (con id y nombre) en lugar de solo strings
         const variablesUnicas = res.data.filter((v, index, self) =>
           index === self.findIndex((t) => t.nombre === v.nombre)
         );
@@ -51,7 +40,7 @@ function KNN() {
   // B. Cargar Lotes SOLO del Cultivo seleccionado
   useEffect(() => {
     if (filtros.cultivoId) {
-      axios.get(`http://127.0.0.1:8000/api/unidades/?cultivo=${filtros.cultivoId}`, getAuthHeaders())
+      API.get(`unidades/?cultivo=${filtros.cultivoId}`)
         .then(res => setListas(prev => ({ ...prev, lotes: res.data })))
         .catch(err => console.error("Error cargando lotes:", err));
     } else {
@@ -62,9 +51,8 @@ function KNN() {
   // C. Cargar Años SOLO del Lote seleccionado
   useEffect(() => {
     if (filtros.loteId) {
-      axios.get(`http://127.0.0.1:8000/api/experimentos/?unidad=${filtros.loteId}`, getAuthHeaders())
+      API.get(`experimentos/?unidad=${filtros.loteId}`)
         .then(res => {
-          // Filtramos años para que no se repitan en el menú desplegable
           const aniosUnicos = [...new Set(res.data.map(a => a.anio))];
           setListas(prev => ({ ...prev, anios: aniosUnicos }));
         })
@@ -75,10 +63,6 @@ function KNN() {
   }, [filtros.loteId]);
 
 
-  // ==========================================================
-  // FUNCIONES DE ANÁLISIS Y REPORTE
-  // ==========================================================
-
   const analizarDatos = async () => {
     if (!filtros.cultivoId || !filtros.loteId || !filtros.anio || !filtros.variable) {
       return alert("Por favor selecciona todos los campos del filtro.");
@@ -86,18 +70,13 @@ function KNN() {
 
     setLoading(true);
     try {
-      const authConfig = getAuthHeaders();
-
-      // CORRECCIÓN: Usamos el objeto 'params' de Axios. Así evitamos concatenar strings manuales 
-      // y se codifican correctamente los espacios y caracteres especiales de la variable.
-      const res = await axios.get("http://127.0.0.1:8000/api/knn-anomalias-existentes/", {
+      const res = await API.get("knn-anomalias-existentes/", {
         params: {
           cultivo: filtros.cultivoId,
           lote: filtros.loteId,
           anio: filtros.anio,
-          variable: filtros.variable // Envía el ID limpio que espera Django
-        },
-        ...authConfig 
+          variable: filtros.variable 
+        }
       });
 
       setReporte(res.data);
@@ -153,7 +132,6 @@ function KNN() {
 
   const listaAnomaliasDetalladas = procesarDetalleAnomalias();
 
-  // Función para obtener nombres reales (para el PDF) basados en los IDs seleccionados
   const getNombreCultivo = () => listas.cultivos.find(c => c.id.toString() === filtros.cultivoId)?.nombre || '';
   const getNombreLote = () => listas.lotes.find(l => l.id.toString() === filtros.loteId)?.nombre || '';
 
@@ -229,9 +207,6 @@ function KNN() {
           </p>
         </div>
 
-        {/* ==============================================
-            FORMULARIO DE FILTROS EN CASCADA
-        ============================================== */}
         <div className="form-card">
           <div className="grid-filters">
             
@@ -275,7 +250,6 @@ function KNN() {
 
             <div className="filter-item">
               <label className="form-label">4. Variable:</label>
-              {/* CORRECCIÓN: El value ahora es v.id mapeando correctamente las Llaves Foráneas */}
               <select 
                 className="form-input" 
                 value={filtros.variable} 
@@ -301,7 +275,6 @@ function KNN() {
           </div>
         </div>
 
-        {/* PRESENTACIÓN DE RESULTADOS */}
         {reporte && (
           <div style={{ marginTop: "20px" }}>
             

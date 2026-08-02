@@ -51,16 +51,16 @@ function Analisis() {
   useEffect(() => {
     const cargarOpciones = async () => {
       try {
-        const resCultivos = await axios.get("http://127.0.0.1:8000/api/cultivos/", getAuthHeaders());
+        const resCultivos = await axios.get("https://agro-utc.onrender.com/api/cultivos/", getAuthHeaders());
         setListaCultivos(resCultivos.data);
 
-        const resVariables = await axios.get("http://127.0.0.1:8000/api/variables/", getAuthHeaders());
+        const resVariables = await axios.get("https://agro-utc.onrender.com/api/variables/", getAuthHeaders());
         setListaVariables(Array.from(new Set(resVariables.data.map(v => v.nombre.toLowerCase()))));
 
-        const resExperimentos = await axios.get("http://127.0.0.1:8000/api/experimentos/", getAuthHeaders());
+        const resExperimentos = await axios.get("https://agro-utc.onrender.com/api/experimentos/", getAuthHeaders());
         setListaAnios(Array.from(new Set(resExperimentos.data.map(exp => exp.anio || exp.nombre))).sort());
 
-        const resTratamientos = await axios.get("http://127.0.0.1:8000/api/tratamientos/", getAuthHeaders());
+        const resTratamientos = await axios.get("https://agro-utc.onrender.com/api/tratamientos/", getAuthHeaders());
         setListaTratamientos(Array.from(new Set(resTratamientos.data.map(t => t.nombre))));
       } catch (error) {
         console.error("Error al cargar opciones base:", error);
@@ -88,7 +88,7 @@ function Analisis() {
     try {
       const tratsParam = tratamientosSel.length > 0 ? `&tratamientos=${tratamientosSel.join(',')}` : "";
 
-      const resComparar = await axios.get(`http://127.0.0.1:8000/api/comparar/?cultivo=${cultivo}&variable=${variable}&anios=${anio1},${anio2}${tratsParam}`, getAuthHeaders());
+      const resComparar = await axios.get(`https://agro-utc.onrender.com/api/comparar/?cultivo=${cultivo}&variable=${variable}&anios=${anio1},${anio2}${tratsParam}`, getAuthHeaders());
       if (!resComparar.data || resComparar.data.length === 0) return alert("No se encontraron datos.");
 
       setDataPrincipal({
@@ -99,8 +99,8 @@ function Analisis() {
         ]
       });
 
-      const resAnio1 = await axios.get(`http://127.0.0.1:8000/api/analisis/?cultivo=${cultivo}&anio=${anio1}&variable=${variable}${tratsParam}`, getAuthHeaders());
-      const resAnio2 = await axios.get(`http://127.0.0.1:8000/api/analisis/?cultivo=${cultivo}&anio=${anio2}&variable=${variable}${tratsParam}`, getAuthHeaders());
+      const resAnio1 = await axios.get(`https://agro-utc.onrender.com/api/analisis/?cultivo=${cultivo}&anio=${anio1}&variable=${variable}${tratsParam}`, getAuthHeaders());
+      const resAnio2 = await axios.get(`https://agro-utc.onrender.com/api/analisis/?cultivo=${cultivo}&anio=${anio2}&variable=${variable}${tratsParam}`, getAuthHeaders());
       
       const t1 = resAnio1.data.todos || [];
       const t2 = resAnio2.data.todos || [];
@@ -132,7 +132,7 @@ function Analisis() {
       setDatosAnio2(estructurarGraficoAnio(t2, anio2));
 
       try {
-          const resKnn = await axios.get(`http://127.0.0.1:8000/api/knn/?cultivo=${cultivo}&variable=${variable}`, getAuthHeaders());
+          const resKnn = await axios.get(`https://agro-utc.onrender.com/api/knn/?cultivo=${cultivo}&variable=${variable}`, getAuthHeaders());
           setDatosKnn(resKnn.data);
       } catch (err) { 
           setDatosKnn(null);

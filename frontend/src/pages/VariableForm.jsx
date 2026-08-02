@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
-import axios from "axios";
-import { getAuthHeaders } from "../services/auth";
+import React, { useState, useEffect } from "react";
+import API from "../services/api"; // Conexión centralizada
 import AnalisisEstadistico from "./AnalisisEstadistico"; 
+import "./VariableForm.css"; // Asumiendo que tienes estilos vinculados
 
 function VariableForm({ 
   expId, 
@@ -12,32 +12,28 @@ function VariableForm({
   anio = "Año no especificado"
 }) { 
   const [tratamiento, setTratamiento] = useState("");
-  
   const [plantas, setPlantas] = useState([
-    { id: 1, valores: Array(10).fill("") },
-    { id: 2, valores: Array(10).fill("") },
+    { id: 1, valores: Array(10).fill("") }, 
+    { id: 2, valores: Array(10).fill("") }, 
     { id: 3, valores: Array(10).fill("") }
   ]);
-  
   const [listaValores, setListaValores] = useState([]);
   const [listaTratamientos, setListaTratamientos] = useState([]);
   const [mostrarAnalisis, setMostrarAnalisis] = useState(false);
   const [cargando, setCargando] = useState(false);
-
-  // ESTADOS PARA LA CARGA DESDE EXCEL
   const [mostrarPegar, setMostrarPegar] = useState(false);
   const [textoExcel, setTextoExcel] = useState("");
   const [cargandoBulk, setCargandoBulk] = useState(false);
 
   const cargarDatos = async () => {
     try {
-      const resValores = await axios.get("http://127.0.0.1:8000/api/valores/", getAuthHeaders());
+      const resValores = await API.get("valores/");
       const datosFiltrados = resValores.data
         .filter(item => item.variable === parseInt(varId) && item.experimento === parseInt(expId))
         .reverse(); 
       setListaValores(datosFiltrados);
 
-      const resTratamientos = await axios.get("http://127.0.0.1:8000/api/tratamientos/", getAuthHeaders());
+      const resTratamientos = await API.get("tratamientos/");
       setListaTratamientos(resTratamientos.data);
     } catch (error) {
       console.error("Error al cargar los datos:", error);
@@ -48,36 +44,26 @@ function VariableForm({
     if(expId && varId) cargarDatos();
   }, [varId, expId]);
 
-  const handleValorChange = (plantaIndex, repIndex, val) => {
-    if ((val === "" || Number(val) >= 0) && val.length <= 6) {
-      const nuevasPlantas = [...plantas];
-      nuevasPlantas[plantaIndex].valores[repIndex] = val;
-      setPlantas(nuevasPlantas);
-    }
+  const handleValorChange = (plantaIndex, valorIndex, nuevoValor) => {
+    const nuevasPlantas = [...plantas];
+    nuevasPlantas[plantaIndex].valores[valorIndex] = nuevoValor;
+    setPlantas(nuevasPlantas);
   };
 
-  const agregarPlanta = () => {
-    setPlantas([...plantas, { id: plantas.length + 1, valores: Array(10).fill("") }]);
+  const calcularPromediosRepeticiones = () => {
+    return plantas.map(planta => {
+      const valoresNumericos = planta.valores
+        .map(v => parseFloat(v))
+        .filter(v => !isNaN(v));
+      
+      if (valoresNumericos.length === 0) return "";
+      
+      const suma = valoresNumericos.reduce((acc, curr) => acc + curr, 0);
+      return (suma / valoresNumericos.length).toFixed(2);
+    });
   };
 
-  const calcularPromediosPorRepeticion = () => {
-    const promedios = Array(10).fill("");
-    for (let repIndex = 0; repIndex < 10; repIndex++) {
-      let suma = 0;
-      let cantidad = 0;
-      plantas.forEach(planta => {
-        const valor = planta.valores[repIndex];
-        if (valor !== "" && !isNaN(valor)) {
-          suma += parseFloat(valor);
-          cantidad++;
-        }
-      });
-      if (cantidad > 0) promedios[repIndex] = (suma / cantidad).toFixed(2);
-    }
-    return promedios;
-  };
-
-  const promediosActuales = calcularPromediosPorRepeticion();
+  const promediosActuales = calcularPromediosRepeticiones();
 
   const guardarDatosPromediados = async () => {
     if (!tratamiento) return alert("Por favor, ingresa el nombre del tratamiento.");
@@ -95,26 +81,27 @@ function VariableForm({
       if (tratamientoExistente) {
         tratamientoId = tratamientoExistente.id;
       } else {
-        const resNuevoTrat = await axios.post("http://127.0.0.1:8000/api/tratamientos/", { nombre: tratamiento.trim() }, getAuthHeaders());
+        const resNuevoTrat = await API.post("tratamientos/", { nombre: tratamiento.trim() });
         tratamientoId = resNuevoTrat.data.id;
       }
 
       const promesasGuardado = promediosActuales.map((promedio, index) => {
         if (promedio !== "") {
-          return axios.post(
-            "http://127.0.0.1:8000/api/valores/",
-            {
-              experimento: parseInt(expId), variable: parseInt(varId),      
-              tratamiento: tratamientoId, repeticion: index + 1, valor: parseFloat(promedio)
-            }, getAuthHeaders()
-          );
+          return API.post("valores/", {
+            experimento: parseInt(expId), 
+            variable: parseInt(varId),      
+            tratamiento: tratamientoId, 
+            repeticion: index + 1, 
+            valor: parseFloat(promedio)
+          });
         }
         return null;
       }).filter(p => p !== null);
 
       await Promise.all(promesasGuardado);
       alert("✅ ¡Promedios guardados con éxito!");
-      limpiarCampos(); cargarDatos(); 
+      limpiarCampos(); 
+      cargarDatos(); 
     } catch (error) {
       console.error("Error al guardar:", error);
       alert("❌ Error al guardar. Revisa la consola.");
@@ -123,97 +110,74 @@ function VariableForm({
     }
   };
 
-  // NUEVA FUNCIÓN PARA PROCESAR EL EXCEL CON MATRIZ EXACTA
+  const limpiarCampos = () => {
+    setTratamiento("");
+    setPlantas([
+      { id: 1, valores: Array(10).fill("") }, 
+      { id: 2, valores: Array(10).fill("") }, 
+      { id: 3, valores: Array(10).fill("") }
+    ]);
+  };
+
   const procesarExcelMatricial = async () => {
-    if (!textoExcel.trim()) return alert("Por favor, pega datos primero.");
+    if (!textoExcel.trim()) return alert("Pega los datos del Excel primero.");
     setCargandoBulk(true);
-    
+
     try {
-      let tratamientosLocales = [...listaTratamientos];
-      const lineas = textoExcel.split(/\r?\n/);
-      let datosAgrupados = {}; 
-      let ultimoTratamiento = "";
+      const filas = textoExcel.trim().split("\n");
+      const promesas = [];
 
-      // 1. Leer y estructurar los datos del texto pegado
-      for (const linea of lineas) {
-        if (!linea.trim()) continue;
-        const columnas = linea.split("\t");
-        
-        let tratNombre = columnas[0] ? columnas[0].trim() : "";
-        
-        // Recordar el último tratamiento (Ej. T1, T2...)
-        if (tratNombre !== "" && tratNombre.toLowerCase() !== "tratamiento") {
-           ultimoTratamiento = tratNombre;
-        } else if (tratNombre === "" && ultimoTratamiento !== "") {
-           tratNombre = ultimoTratamiento;
+      for (let i = 0; i < filas.length; i++) {
+        const columnas = filas[i].split("\t"); 
+        if (columnas.length < 4) continue; 
+
+        const tratNombre = columnas[0].trim();
+        const rep1 = parseFloat(columnas[1].replace(',', '.'));
+        const rep2 = parseFloat(columnas[2].replace(',', '.'));
+        const rep3 = parseFloat(columnas[3].replace(',', '.'));
+
+        if (!tratNombre || isNaN(rep1) || isNaN(rep2) || isNaN(rep3)) continue;
+
+        let tratamientoId = null;
+        const tratamientoExistente = listaTratamientos.find(
+          (t) => t.nombre.toLowerCase() === tratNombre.toLowerCase()
+        );
+
+        if (tratamientoExistente) {
+          tratamientoId = tratamientoExistente.id;
+        } else {
+          const resNuevoTrat = await API.post("tratamientos/", { nombre: tratNombre });
+          tratamientoId = resNuevoTrat.data.id;
+          setListaTratamientos(prev => [...prev, resNuevoTrat.data]);
         }
 
-        if (!tratNombre) continue;
+        const datosAGuardar = [
+          { repeticion: 1, valor: rep1 },
+          { repeticion: 2, valor: rep2 },
+          { repeticion: 3, valor: rep3 }
+        ];
 
-        // Si la fila es un encabezado (dice "Planta", "R1", etc.), la saltamos
-        const colPlanta = columnas[1] ? columnas[1].trim().toLowerCase() : "";
-        if (colPlanta === "planta" || colPlanta === "") continue;
-
-        if (!datosAgrupados[tratNombre]) {
-           datosAgrupados[tratNombre] = Array(10).fill().map(() => []);
+        for (const dato of datosAGuardar) {
+          promesas.push(
+            API.post("valores/", {
+              experimento: parseInt(expId),
+              variable: parseInt(varId),
+              tratamiento: tratamientoId,
+              repeticion: dato.repeticion,
+              valor: dato.valor
+            })
+          );
         }
-
-        // Extraer SOLO los números, saltando celdas vacías por formato de Excel
-        let repIndex = 0;
-        for (let i = 2; i < columnas.length; i++) {
-          if (repIndex >= 10) break; // Ya tenemos las 10 repeticiones
-
-          const valStr = columnas[i] ? columnas[i].trim().replace(",", ".") : "";
-          if (valStr !== "" && !isNaN(valStr)) {
-             datosAgrupados[tratNombre][repIndex].push(parseFloat(valStr));
-             repIndex++;
-          }
-        }
-      }
-
-      let promediosGuardados = 0;
-      let promesas = [];
-
-      // 2. Calcular promedios y enviar a la base de datos
-      for (const [tratNombre, repeticionesData] of Object.entries(datosAgrupados)) {
-         let tratamientoId = null;
-         const existe = tratamientosLocales.find((t) => t.nombre.toLowerCase() === tratNombre.toLowerCase());
-         
-         if (existe) {
-           tratamientoId = existe.id;
-         } else {
-           const resNuevoTrat = await axios.post("http://127.0.0.1:8000/api/tratamientos/", { nombre: tratNombre }, getAuthHeaders());
-           tratamientoId = resNuevoTrat.data.id;
-           tratamientosLocales.push(resNuevoTrat.data);
-         }
-
-         for (let i = 0; i < 10; i++) {
-           const valores = repeticionesData[i];
-           if (valores.length > 0) {
-             const suma = valores.reduce((a, b) => a + b, 0);
-             const promedioFinal = (suma / valores.length).toFixed(2);
-             
-             promesas.push(
-               axios.post("http://127.0.0.1:8000/api/valores/", {
-                 experimento: parseInt(expId),
-                 variable: parseInt(varId),
-                 tratamiento: tratamientoId,
-                 repeticion: i + 1, 
-                 valor: parseFloat(promedioFinal)
-               }, getAuthHeaders())
-             );
-             promediosGuardados++;
-           }
-         }
       }
 
       await Promise.all(promesas);
-
-      alert(`✅ ¡Éxito! Se agruparon las plantas y se guardaron ${promediosGuardados} promedios.`);
-      setTextoExcel(""); setMostrarPegar(false); cargarDatos();
+      alert("✅ Datos masivos importados con éxito");
+      setTextoExcel("");
+      setMostrarPegar(false);
+      cargarDatos();
     } catch (error) {
-      console.error("Error en la importación masiva:", error);
-      alert("❌ Ocurrió un problema guardando las filas. Verifica la consola.");
+      console.error("Error al procesar Excel:", error);
+      alert("Error procesando los datos. Revisa el formato.");
     } finally {
       setCargandoBulk(false);
     }
@@ -222,7 +186,7 @@ function VariableForm({
   const eliminarDato = async (id) => {
     if (!window.confirm("¿Estás seguro de eliminar este registro?")) return;
     try {
-      await axios.delete(`http://127.0.0.1:8000/api/valores/${id}/`, getAuthHeaders());
+      await API.delete(`valores/${id}/`);
       alert("🗑️ Registro eliminado.");
       cargarDatos();
     } catch (error) {
@@ -230,148 +194,124 @@ function VariableForm({
     }
   };
 
-  const limpiarCampos = () => {
-    setTratamiento(""); 
-    setPlantas([
-      { id: 1, valores: Array(10).fill("") },
-      { id: 2, valores: Array(10).fill("") },
-      { id: 3, valores: Array(10).fill("") }
-    ]); 
+  const obtenerNombreTratamiento = (id) => {
+    const trat = listaTratamientos.find(t => t.id === id);
+    return trat ? trat.nombre : "Desconocido";
   };
 
-  const obtenerNombreTratamiento = (idTrat) => {
-    const t = listaTratamientos.find(x => x.id === idTrat);
-    return t ? t.nombre : `ID: ${idTrat}`;
-  };
+  if (mostrarAnalisis) {
+    return <AnalisisEstadistico 
+      datos={listaValores} 
+      tratamientos={listaTratamientos}
+      onVolver={() => setMostrarAnalisis(false)}
+      nombreVariable={nombreVariable}
+    />;
+  }
 
   return (
-    <div style={{ backgroundColor: "#fff", padding: "20px", borderRadius: "8px", boxShadow: "0 2px 8px rgba(0,0,0,0.1)" }}>
-      <h3 style={{ color: "#0277bd", marginTop: 0, borderBottom: "2px solid #eee", paddingBottom: "10px" }}>📊 Registro de Mediciones - Promedios In Vitro</h3>
-
-      {/* --- FORMULARIO MANUAL --- */}
-      <div style={{ backgroundColor: "#f8f9fa", padding: "15px", borderRadius: "8px", border: "1px solid #e0e0e0", marginBottom: "20px", overflowX: "auto" }}>
-        
-        <div style={{ marginBottom: "15px", width: "300px" }}>
-          <label style={{ display: "block", color: "#0277bd", fontWeight: "bold", fontSize: "14px", marginBottom: "5px" }}>Tratamiento (Ej. T1):</label>
-          <input type="text" value={tratamiento} onChange={(e) => setTratamiento(e.target.value)} list="trat-list" style={{ width: "100%", padding: "8px", borderRadius: "4px", border: "1px solid #ccc" }} />
-          <datalist id="trat-list">{listaTratamientos.map(t => <option key={t.id} value={t.nombre} />)}</datalist>
-        </div>
-
-        <table style={{ width: "100%", borderCollapse: "collapse", minWidth: "600px" }}>
-          <thead>
-            <tr>
-              <th style={{ padding: "8px", backgroundColor: "#e3f2fd", border: "1px solid #bbdefb", textAlign: "left" }}>Plantas</th>
-              {[...Array(10)].map((_, i) => (
-                <th key={i} style={{ padding: "8px", backgroundColor: "#e3f2fd", border: "1px solid #bbdefb", textAlign: "center", width: "8%" }}>R{i + 1}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {plantas.map((planta, pIndex) => (
-              <tr key={planta.id}>
-                <td style={{ padding: "8px", border: "1px solid #eee", fontWeight: "bold", color: "#424242" }}>Planta {planta.id}</td>
-                {planta.valores.map((valor, rIndex) => (
-                  <td key={rIndex} style={{ padding: "4px", border: "1px solid #eee" }}>
-                    <input type="number" min="0" step="0.01" value={valor} onChange={(e) => handleValorChange(pIndex, rIndex, e.target.value)} style={{ width: "100%", padding: "4px", boxSizing: "border-box", textAlign: "center", border: "1px solid #ccc", borderRadius: "3px" }} />
-                  </td>
-                ))}
-              </tr>
-            ))}
-            <tr style={{ backgroundColor: "#e8f5e9" }}>
-              <td style={{ padding: "10px 8px", border: "1px solid #c8e6c9", fontWeight: "bold", color: "#2e7d32" }}>Promedios Finales:</td>
-              {promediosActuales.map((prom, index) => (
-                <td key={index} style={{ padding: "10px 8px", border: "1px solid #c8e6c9", textAlign: "center", fontWeight: "bold", color: "#1b5e20" }}>{prom !== "" ? prom : "-"}</td>
-              ))}
-            </tr>
-          </tbody>
-        </table>
-        
-        <div style={{ marginTop: "10px" }}>
-          <button onClick={agregarPlanta} style={{ padding: "6px 12px", backgroundColor: "#eceff1", color: "#455a64", border: "1px solid #cfd8dc", borderRadius: "4px", cursor: "pointer", fontSize: "12px" }}>+ Agregar otra Planta</button>
-        </div>
+    <div className="variable-form-container">
+      
+      <div className="form-header">
+        <h3>Registrar Datos: {nombreVariable}</h3>
+        <p>Cultivo: {nombreCultivo} | Lote: {nombreLote} | Año: {anio}</p>
       </div>
 
-      {/* --- SECCIÓN PEGAR DESDE EXCEL --- */}
-      {mostrarPegar && (
-        <div style={{ marginBottom: "20px", padding: "15px", backgroundColor: "#f9f9f9", borderRadius: "6px", border: "1px dashed #0288d1" }}>
-          <label style={{ display: "block", color: "#0288d1", fontWeight: "bold", fontSize: "14px", marginBottom: "5px" }}>
-            Copia desde tu Excel las 12 columnas: Tratamiento | Planta | R1 hasta R10 y pégalas aquí. 
-          </label>
-          <span style={{ fontSize: "12px", color: "#666", display: "block", marginBottom: "10px" }}>
-            El sistema detectará múltiples plantas para un mismo tratamiento, promediará R1, R2, etc. automáticamente y guardará los resultados.
-          </span>
-          <textarea
-            rows="6"
+      <div className="actions-bar">
+        <button className="btn-toggle" onClick={() => setMostrarPegar(!mostrarPegar)}>
+          {mostrarPegar ? "Volver a Ingreso Manual" : "📋 Pegar desde Excel"}
+        </button>
+        <button className="btn-analisis" onClick={() => setMostrarAnalisis(true)} disabled={listaValores.length === 0}>
+          📈 Ver Análisis Estadístico (ANOVA)
+        </button>
+      </div>
+
+      {mostrarPegar ? (
+        <div className="excel-paste-area">
+          <p>Pega aquí tus datos copiados desde Excel. El formato debe ser: <strong>Tratamiento | Repeticion 1 | Repeticion 2 | Repeticion 3</strong></p>
+          <textarea 
+            rows="6" 
+            placeholder="Ejemplo:&#10;Tratamiento A&#9;15.2&#9;14.8&#9;15.5&#10;Tratamiento B&#9;12.1&#9;11.9&#9;12.4"
             value={textoExcel}
             onChange={(e) => setTextoExcel(e.target.value)}
-            placeholder="Haz clic aquí y presiona Ctrl+V..."
-            style={{ width: "100%", padding: "8px", borderRadius: "4px", border: "1px solid #ccc", fontFamily: "monospace", fontSize: "12px", resize: "vertical" }}
-            disabled={cargandoBulk}
-          />
-          <div style={{ display: "flex", gap: "10px", marginTop: "10px", justifyContent: "flex-end" }}>
-            <button onClick={procesarExcelMatricial} disabled={cargandoBulk} style={{ padding: "6px 12px", backgroundColor: "#0288d1", color: "#fff", border: "none", borderRadius: "4px", cursor: "pointer", fontWeight: "bold" }}>
-              {cargandoBulk ? "Procesando promedios..." : "⚡ Calcular y Guardar a BD"}
-            </button>
-            <button onClick={() => { setTextoExcel(""); setMostrarPegar(false); }} disabled={cargandoBulk} style={{ padding: "6px 12px", backgroundColor: "#757575", color: "#fff", border: "none", borderRadius: "4px", cursor: "pointer" }}>
-              Cancelar
+          ></textarea>
+          <button className="btn-save" onClick={procesarExcelMatricial} disabled={cargandoBulk}>
+            {cargandoBulk ? "Procesando..." : "Guardar Datos de Excel"}
+          </button>
+        </div>
+      ) : (
+        <div className="manual-entry-area">
+          <div className="input-group">
+            <label>Nombre del Tratamiento:</label>
+            <input 
+              type="text" 
+              value={tratamiento} 
+              onChange={e => setTratamiento(e.target.value)} 
+              placeholder="Ej. Medio MS + 2,4-D"
+            />
+          </div>
+
+          <div className="plantas-grid">
+            {plantas.map((planta, pIndex) => (
+              <div key={planta.id} className="planta-card">
+                <h4>Repetición {planta.id}</h4>
+                <div className="valores-grid">
+                  {planta.valores.map((val, vIndex) => (
+                    <input 
+                      key={vIndex}
+                      type="number"
+                      step="0.01"
+                      placeholder={`P${vIndex + 1}`}
+                      value={val}
+                      onChange={(e) => handleValorChange(pIndex, vIndex, e.target.value)}
+                    />
+                  ))}
+                </div>
+                <div className="promedio-display">
+                  Promedio: <strong>{promediosActuales[pIndex] || "0.00"}</strong>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="form-footer">
+            <button className="btn-clear" onClick={limpiarCampos}>Limpiar Celdas</button>
+            <button className="btn-save" onClick={guardarDatosPromediados} disabled={cargando}>
+              {cargando ? "Guardando..." : "Guardar Promedios"}
             </button>
           </div>
         </div>
       )}
 
-      {/* --- BOTONERA PRINCIPAL --- */}
-      <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end", flexWrap: "wrap", marginBottom: "20px" }}>
-        <button onClick={() => setMostrarPegar(!mostrarPegar)} style={{ padding: "8px 16px", backgroundColor: "#e0f2f1", color: "#004d40", border: "1px solid #004d40", borderRadius: "4px", cursor: "pointer", fontWeight: "bold" }}>
-          📋 Importar desde Excel
-        </button>
-        <button onClick={guardarDatosPromediados} disabled={cargando} style={{ padding: "8px 16px", backgroundColor: "#2e7d32", color: "#fff", border: "none", borderRadius: "4px", cursor: "pointer", fontWeight: "bold" }}>
-          {cargando ? "Guardando..." : "Guardar Formulario"}
-        </button>
-        <button onClick={limpiarCampos} style={{ padding: "8px 16px", backgroundColor: "#757575", color: "#fff", border: "none", borderRadius: "4px", cursor: "pointer", fontWeight: "bold" }}>Limpiar</button>
-        <button onClick={() => setMostrarAnalisis(!mostrarAnalisis)} style={{ padding: "8px 16px", backgroundColor: "#0288d1", color: "#fff", border: "none", borderRadius: "4px", cursor: "pointer", fontWeight: "bold" }}>📊 Ver Análisis</button>
-      </div>
-
-      <h4 style={{ color: "#424242", borderBottom: "1px solid #eee", paddingBottom: "5px" }}>Registros en Base de Datos</h4>
-      <div style={{ maxHeight: "250px", overflowY: "auto", border: "1px solid #ddd", borderRadius: "8px" }}>
-        <table className="sql-table" style={{ margin: 0, width: "100%", borderCollapse: "collapse" }}>
-          <thead style={{ position: "sticky", top: 0, backgroundColor: "#f4f7f6", zIndex: 1 }}>
-            <tr>
-              <th style={{padding: "10px", borderBottom: "2px solid #ddd", textAlign: "left"}}>Tratamiento</th>
-              <th style={{padding: "10px", borderBottom: "2px solid #ddd", textAlign: "left"}}>Repetición (R)</th>
-              <th style={{padding: "10px", borderBottom: "2px solid #ddd", textAlign: "left"}}>Valor (Promedio)</th>
-              <th style={{padding: "10px", borderBottom: "2px solid #ddd", textAlign: "center"}}>Acción</th>
-            </tr>
-          </thead>
-          <tbody>
-            {listaValores.map((dato) => (
-              <tr key={dato.id} style={{ backgroundColor: "transparent" }}>
-                <td style={{padding: "10px", borderBottom: "1px solid #eee"}}>{obtenerNombreTratamiento(dato.tratamiento)}</td>
-                <td style={{padding: "10px", borderBottom: "1px solid #eee"}}>R{dato.repeticion}</td>
-                <td style={{padding: "10px", borderBottom: "1px solid #eee", fontWeight: "bold"}}>{dato.valor}</td>
-                <td style={{padding: "10px", borderBottom: "1px solid #eee", textAlign: "center"}}>
-                  <button onClick={() => eliminarDato(dato.id)} style={{ padding: "4px 8px", backgroundColor: "#ffebee", color: "#c62828", border: "1px solid #ffcdd2", borderRadius: "4px", cursor: "pointer", fontSize: "12px" }}>Eliminar</button>
-                </td>
+      <div className="registros-tabla">
+        <h4>Registros Guardados</h4>
+        {listaValores.length > 0 ? (
+          <table>
+            <thead>
+              <tr>
+                <th>Tratamiento</th>
+                <th>Repetición</th>
+                <th>Valor Promedio</th>
+                <th>Acciones</th>
               </tr>
-            ))}
-            {listaValores.length === 0 && (
-              <tr><td colSpan="4" style={{textAlign:"center", padding: "15px"}}>No hay datos registrados aún.</td></tr>
-            )}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {listaValores.map(registro => (
+                <tr key={registro.id}>
+                  <td>{obtenerNombreTratamiento(registro.tratamiento)}</td>
+                  <td>Rep {registro.repeticion}</td>
+                  <td>{registro.valor}</td>
+                  <td>
+                    <button className="btn-delete" onClick={() => eliminarDato(registro.id)}>🗑️ Eliminar</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        ) : (
+          <p className="no-data">No hay registros guardados para esta variable.</p>
+        )}
       </div>
 
-      {mostrarAnalisis && listaValores.length > 0 && (
-        <div style={{ marginTop: "20px" }}>
-          <AnalisisEstadistico 
-            valores={listaValores} 
-            tratamientos={listaTratamientos} 
-            nombreCultivo={nombreCultivo} 
-            nombreVariable={nombreVariable}
-            nombreLote={nombreLote}
-            anio={anio}
-          />
-        </div>
-      )}
     </div>
   );
 }

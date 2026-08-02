@@ -28,10 +28,10 @@ function Dashboard() {
         const headers = getAuthHeaders();
         
         const [resCultivos, resValores, resExperimentos, resTratamientos] = await Promise.all([
-          axios.get("http://127.0.0.1:8000/api/cultivos/", headers).catch(() => ({ data: [] })),
-          axios.get("http://127.0.0.1:8000/api/valores/", headers).catch(() => ({ data: [] })),
-          axios.get("http://127.0.0.1:8000/api/experimentos/", headers).catch(() => ({ data: [] })),
-          axios.get("http://127.0.0.1:8000/api/tratamientos/", headers).catch(() => ({ data: [] }))
+          axios.get("https://agro-utc.onrender.com/api/cultivos/", headers).catch(() => ({ data: [] })),
+          axios.get("https://agro-utc.onrender.com/api/valores/", headers).catch(() => ({ data: [] })),
+          axios.get("https://agro-utc.onrender.com/api/experimentos/", headers).catch(() => ({ data: [] })),
+          axios.get("https://agro-utc.onrender.com/api/tratamientos/", headers).catch(() => ({ data: [] }))
         ]);
 
         setStats({
