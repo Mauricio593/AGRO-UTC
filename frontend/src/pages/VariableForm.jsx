@@ -24,21 +24,24 @@ function VariableForm({
   const [mostrarAnalisis, setMostrarAnalisis] = useState(false);
   const [cargando, setCargando] = useState(false);
 
-  // ESTADOS PARA LA CARGA DESDE EXCEL
+  // ESTADOS PARA LA CARGA DESDE EXCEL (Matricial Superior)
   const [mostrarPegar, setMostrarPegar] = useState(false);
   const [textoExcel, setTextoExcel] = useState("");
   const [cargandoBulk, setCargandoBulk] = useState(false);
 
+  // NUEVOS ESTADOS PARA PEGAR REGISTROS DIRECTOS (Inferior)
+  const [mostrarPegarDirecto, setMostrarPegarDirecto] = useState(false);
+  const [textoExcelDirecto, setTextoExcelDirecto] = useState("");
+  const [cargandoDirecto, setCargandoDirecto] = useState(false);
+
   const cargarDatos = async () => {
     try {
-      // 🟢 CAMBIO A URL DE PRODUCCIÓN
       const resValores = await axios.get("https://agro-utc.onrender.com/api/valores/", getAuthHeaders());
       const datosFiltrados = resValores.data
         .filter(item => item.variable === parseInt(varId) && item.experimento === parseInt(expId))
         .reverse(); 
       setListaValores(datosFiltrados);
 
-      // 🟢 CAMBIO A URL DE PRODUCCIÓN
       const resTratamientos = await axios.get("https://agro-utc.onrender.com/api/tratamientos/", getAuthHeaders());
       setListaTratamientos(resTratamientos.data);
     } catch (error) {
@@ -97,14 +100,12 @@ function VariableForm({
       if (tratamientoExistente) {
         tratamientoId = tratamientoExistente.id;
       } else {
-        // 🟢 CAMBIO A URL DE PRODUCCIÓN
         const resNuevoTrat = await axios.post("https://agro-utc.onrender.com/api/tratamientos/", { nombre: tratamiento.trim() }, getAuthHeaders());
         tratamientoId = resNuevoTrat.data.id;
       }
 
       const promesasGuardado = promediosActuales.map((promedio, index) => {
         if (promedio !== "") {
-          // 🟢 CAMBIO A URL DE PRODUCCIÓN
           return axios.post(
             "https://agro-utc.onrender.com/api/valores/",
             {
@@ -127,7 +128,7 @@ function VariableForm({
     }
   };
 
-  // NUEVA FUNCIÓN PARA PROCESAR EL EXCEL CON MATRIZ EXACTA
+  // FUNCIÓN EXISTENTE: PROCESAR EXCEL MATRICIAL
   const procesarExcelMatricial = async () => {
     if (!textoExcel.trim()) return alert("Por favor, pega datos primero.");
     setCargandoBulk(true);
@@ -138,14 +139,12 @@ function VariableForm({
       let datosAgrupados = {}; 
       let ultimoTratamiento = "";
 
-      // 1. Leer y estructurar los datos del texto pegado
       for (const linea of lineas) {
         if (!linea.trim()) continue;
         const columnas = linea.split("\t");
         
         let tratNombre = columnas[0] ? columnas[0].trim() : "";
         
-        // Recordar el último tratamiento (Ej. T1, T2...)
         if (tratNombre !== "" && tratNombre.toLowerCase() !== "tratamiento") {
            ultimoTratamiento = tratNombre;
         } else if (tratNombre === "" && ultimoTratamiento !== "") {
@@ -154,7 +153,6 @@ function VariableForm({
 
         if (!tratNombre) continue;
 
-        // Si la fila es un encabezado (dice "Planta", "R1", etc.), la saltamos
         const colPlanta = columnas[1] ? columnas[1].trim().toLowerCase() : "";
         if (colPlanta === "planta" || colPlanta === "") continue;
 
@@ -162,10 +160,9 @@ function VariableForm({
            datosAgrupados[tratNombre] = Array(10).fill().map(() => []);
         }
 
-        // Extraer SOLO los números, saltando celdas vacías por formato de Excel
         let repIndex = 0;
         for (let i = 2; i < columnas.length; i++) {
-          if (repIndex >= 10) break; // Ya tenemos las 10 repeticiones
+          if (repIndex >= 10) break;
 
           const valStr = columnas[i] ? columnas[i].trim().replace(",", ".") : "";
           if (valStr !== "" && !isNaN(valStr)) {
@@ -178,7 +175,6 @@ function VariableForm({
       let promediosGuardados = 0;
       let promesas = [];
 
-      // 2. Calcular promedios y enviar a la base de datos
       for (const [tratNombre, repeticionesData] of Object.entries(datosAgrupados)) {
          let tratamientoId = null;
          const existe = tratamientosLocales.find((t) => t.nombre.toLowerCase() === tratNombre.toLowerCase());
@@ -186,7 +182,6 @@ function VariableForm({
          if (existe) {
            tratamientoId = existe.id;
          } else {
-           // 🟢 CAMBIO A URL DE PRODUCCIÓN
            const resNuevoTrat = await axios.post("https://agro-utc.onrender.com/api/tratamientos/", { nombre: tratNombre }, getAuthHeaders());
            tratamientoId = resNuevoTrat.data.id;
            tratamientosLocales.push(resNuevoTrat.data);
@@ -198,7 +193,6 @@ function VariableForm({
              const suma = valores.reduce((a, b) => a + b, 0);
              const promedioFinal = (suma / valores.length).toFixed(2);
              
-             // 🟢 CAMBIO A URL DE PRODUCCIÓN
              promesas.push(
                axios.post("https://agro-utc.onrender.com/api/valores/", {
                  experimento: parseInt(expId),
@@ -225,10 +219,72 @@ function VariableForm({
     }
   };
 
+  // NUEVA FUNCIÓN: PROCESAR REGISTROS DIRECTOS (Tratamiento | Repetición | Valor)
+  const procesarExcelDirecto = async () => {
+    if (!textoExcelDirecto.trim()) return alert("Por favor, pega datos primero.");
+    setCargandoDirecto(true);
+    
+    try {
+      let tratamientosLocales = [...listaTratamientos];
+      const lineas = textoExcelDirecto.split(/\r?\n/);
+      let promesas = [];
+      let registrosGuardados = 0;
+
+      for (const linea of lineas) {
+        if (!linea.trim()) continue;
+        const columnas = linea.split("\t");
+        
+        // Verificamos que al menos existan 3 columnas
+        if (columnas.length < 3) continue;
+
+        const tratNombre = columnas[0].trim();
+        // Limpiamos la repetición en caso de que copien "R1" en lugar de "1"
+        const repeticionStr = columnas[1].trim().replace(/\D/g, ''); 
+        const repeticion = parseInt(repeticionStr);
+        // Formateamos el valor numérico
+        const valor = parseFloat(columnas[2].trim().replace(",", "."));
+
+        // Si falta algún dato importante o la fila era encabezado, la saltamos
+        if (!tratNombre || isNaN(repeticion) || isNaN(valor) || tratNombre.toLowerCase() === 'tratamiento') continue;
+
+        let tratamientoId = null;
+        const existe = tratamientosLocales.find((t) => t.nombre.toLowerCase() === tratNombre.toLowerCase());
+
+        if (existe) {
+          tratamientoId = existe.id;
+        } else {
+          const resNuevoTrat = await axios.post("https://agro-utc.onrender.com/api/tratamientos/", { nombre: tratNombre }, getAuthHeaders());
+          tratamientoId = resNuevoTrat.data.id;
+          tratamientosLocales.push(resNuevoTrat.data);
+        }
+
+        promesas.push(
+          axios.post("https://agro-utc.onrender.com/api/valores/", {
+            experimento: parseInt(expId),
+            variable: parseInt(varId),
+            tratamiento: tratamientoId,
+            repeticion: repeticion,
+            valor: valor
+          }, getAuthHeaders())
+        );
+        registrosGuardados++;
+      }
+
+      await Promise.all(promesas);
+
+      alert(`✅ ¡Éxito! Se guardaron ${registrosGuardados} registros directamente en la base de datos.`);
+      setTextoExcelDirecto(""); setMostrarPegarDirecto(false); cargarDatos();
+    } catch (error) {
+      console.error("Error al importar registros directos:", error);
+      alert("❌ Hubo un error al guardar los registros. Verifica que el formato sea el correcto.");
+    } finally {
+      setCargandoDirecto(false);
+    }
+  };
+
   const eliminarDato = async (id) => {
     if (!window.confirm("¿Estás seguro de eliminar este registro?")) return;
     try {
-      // 🟢 CAMBIO A URL DE PRODUCCIÓN
       await axios.delete(`https://agro-utc.onrender.com/api/valores/${id}/`, getAuthHeaders());
       alert("🗑️ Registro eliminado.");
       cargarDatos();
@@ -298,7 +354,7 @@ function VariableForm({
         </div>
       </div>
 
-      {/* --- SECCIÓN PEGAR DESDE EXCEL --- */}
+      {/* --- SECCIÓN PEGAR DESDE EXCEL (Matriz) --- */}
       {mostrarPegar && (
         <div style={{ marginBottom: "20px", padding: "15px", backgroundColor: "#f9f9f9", borderRadius: "6px", border: "1px dashed #0288d1" }}>
           <label style={{ display: "block", color: "#0288d1", fontWeight: "bold", fontSize: "14px", marginBottom: "5px" }}>
@@ -327,9 +383,9 @@ function VariableForm({
       )}
 
       {/* --- BOTONERA PRINCIPAL --- */}
-      <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end", flexWrap: "wrap", marginBottom: "20px" }}>
+      <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end", flexWrap: "wrap", marginBottom: "30px" }}>
         <button onClick={() => setMostrarPegar(!mostrarPegar)} style={{ padding: "8px 16px", backgroundColor: "#e0f2f1", color: "#004d40", border: "1px solid #004d40", borderRadius: "4px", cursor: "pointer", fontWeight: "bold" }}>
-          📋 Importar desde Excel
+          📋 Importar Matriz Excel
         </button>
         <button onClick={guardarDatosPromediados} disabled={cargando} style={{ padding: "8px 16px", backgroundColor: "#2e7d32", color: "#fff", border: "none", borderRadius: "4px", cursor: "pointer", fontWeight: "bold" }}>
           {cargando ? "Guardando..." : "Guardar Formulario"}
@@ -338,7 +394,43 @@ function VariableForm({
         <button onClick={() => setMostrarAnalisis(!mostrarAnalisis)} style={{ padding: "8px 16px", backgroundColor: "#0288d1", color: "#fff", border: "none", borderRadius: "4px", cursor: "pointer", fontWeight: "bold" }}>📊 Ver Análisis</button>
       </div>
 
-      <h4 style={{ color: "#424242", borderBottom: "1px solid #eee", paddingBottom: "5px" }}>Registros en Base de Datos</h4>
+      {/* --- NUEVO: ENCABEZADO FLEXIBLE PARA LA TABLA DE REGISTROS --- */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid #eee", paddingBottom: "10px", marginBottom: "15px" }}>
+        <h4 style={{ color: "#424242", margin: 0 }}>Registros en Base de Datos</h4>
+        <button onClick={() => setMostrarPegarDirecto(!mostrarPegarDirecto)} style={{ padding: "6px 12px", backgroundColor: "#00897b", color: "#fff", border: "none", borderRadius: "4px", cursor: "pointer", fontSize: "13px", fontWeight: "bold" }}>
+          📋 Pegar Datos Directos
+        </button>
+      </div>
+
+      {/* --- NUEVA SECCIÓN: PEGAR REGISTROS DIRECTOS --- */}
+      {mostrarPegarDirecto && (
+        <div style={{ marginBottom: "15px", padding: "15px", backgroundColor: "#e0f2f1", borderRadius: "6px", border: "1px dashed #00897b" }}>
+          <label style={{ display: "block", color: "#00695c", fontWeight: "bold", fontSize: "14px", marginBottom: "5px" }}>
+            Copia desde Excel 3 columnas: Tratamiento | Repetición | Valor Promedio
+          </label>
+          <span style={{ fontSize: "12px", color: "#004d40", display: "block", marginBottom: "10px" }}>
+            Ideal si ya tienes los promedios calculados. (Ej. T1  1  15.5)
+          </span>
+          <textarea
+            rows="5"
+            value={textoExcelDirecto}
+            onChange={(e) => setTextoExcelDirecto(e.target.value)}
+            placeholder="T1&#9;1&#9;15.5&#10;T1&#9;2&#9;16.0..."
+            style={{ width: "100%", padding: "8px", borderRadius: "4px", border: "1px solid #b2dfdb", fontFamily: "monospace", fontSize: "12px", resize: "vertical" }}
+            disabled={cargandoDirecto}
+          />
+          <div style={{ display: "flex", gap: "10px", marginTop: "10px", justifyContent: "flex-end" }}>
+            <button onClick={procesarExcelDirecto} disabled={cargandoDirecto} style={{ padding: "6px 12px", backgroundColor: "#00897b", color: "#fff", border: "none", borderRadius: "4px", cursor: "pointer", fontWeight: "bold" }}>
+              {cargandoDirecto ? "Guardando registros..." : "⚡ Guardar en BD"}
+            </button>
+            <button onClick={() => { setTextoExcelDirecto(""); setMostrarPegarDirecto(false); }} disabled={cargandoDirecto} style={{ padding: "6px 12px", backgroundColor: "#757575", color: "#fff", border: "none", borderRadius: "4px", cursor: "pointer" }}>
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* TABLA DE BASE DE DATOS */}
       <div style={{ maxHeight: "250px", overflowY: "auto", border: "1px solid #ddd", borderRadius: "8px" }}>
         <table className="sql-table" style={{ margin: 0, width: "100%", borderCollapse: "collapse" }}>
           <thead style={{ position: "sticky", top: 0, backgroundColor: "#f4f7f6", zIndex: 1 }}>
