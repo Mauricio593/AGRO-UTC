@@ -5,13 +5,15 @@ import Navbar from "../components/Navbar";
 import "./Cultivos.css"; 
 
 function RegisterData() {
-  const { id } = useParams(); // ID del EXPERIMENTO (Lo extraemos de la URL actual)
+  const { id } = useParams(); 
   const [variables, setVariables] = useState([]);
   const [nombre, setNombre] = useState("");
   
-  // Estados para controlar la edición y el diseño visual
   const [editandoId, setEditandoId] = useState(null);
   const [filaSeleccionada, setFilaSeleccionada] = useState(null);
+  
+  // NUEVO: Estado para manejar los mensajes de error visuales
+  const [errorMsg, setErrorMsg] = useState("");
   
   const navigate = useNavigate();
 
@@ -25,24 +27,29 @@ function RegisterData() {
   };
 
   const guardarVariable = async () => {
+    // Limpiamos errores previos
+    setErrorMsg("");
+    
     const nombreNormalizado = nombre.trim();
-    if (!nombreNormalizado) return alert("Escribe un nombre para la variable.");
+    
+    // VALIDACIÓN 1: Campo vacío
+    if (!nombreNormalizado) {
+      return setErrorMsg("El nombre de la variable es obligatorio.");
+    }
 
-    // ✅ VALIDACIÓN EXTRA AL GUARDAR: Bloquea si detecta números o símbolos pegados
+    // VALIDACIÓN 2: Solo letras y espacios
     const soloLetrasRegex = /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/;
     if (!soloLetrasRegex.test(nombreNormalizado)) {
-      return alert("❌ Error: El nombre de la variable solo puede contener letras y espacios. No se permiten números.");
+      return setErrorMsg("El nombre solo puede contener letras y espacios.");
     }
 
     try {
       if (editandoId) {
-        // ACTUALIZAR (PUT)
         await API.put(`variables/${editandoId}/`, { 
           nombre: nombreNormalizado
         });
         setEditandoId(null);
       } else {
-        // CREAR (POST)
         await API.post("variables/", { 
           nombre: nombreNormalizado
         });
@@ -53,30 +60,33 @@ function RegisterData() {
       getVariables(); 
     } catch (error) {
       console.error("Error al guardar:", error);
-      alert("Error al guardar la variable.");
+      setErrorMsg("Error al guardar la variable en el servidor.");
     }
   };
 
   const eliminarVariable = async (varId) => {
+    // Nota: Mantenemos el confirm para la eliminación por seguridad, 
+    // ya que es una acción destructiva muy delicada.
     if (window.confirm("¿Seguro que deseas eliminar esta variable? Se borrarán todos sus datos registrados.")) {
       try {
         await API.delete(`variables/${varId}/`);
         if (editandoId === varId) cancelarEdicion();
         getVariables();
       } catch (error) {
-        alert("Error al eliminar.");
+        setErrorMsg("Error al eliminar la variable.");
       }
     }
   };
 
-  // Funciones para manejar la edición
   const prepararEdicion = (variable) => {
+    setErrorMsg(""); // Limpiar errores al cambiar de modo
     setNombre(variable.nombre);
     setEditandoId(variable.id);
     setFilaSeleccionada(variable.id);
   };
 
   const cancelarEdicion = () => {
+    setErrorMsg(""); // Limpiar errores
     setEditandoId(null);
     setNombre("");
     setFilaSeleccionada(null);
@@ -92,7 +102,6 @@ function RegisterData() {
 
       <div className="main-container">
         
-        {/* ENCABEZADO CON BOTÓN DE REGRESAR */}
         <div className="header-container">
           <button className="btn-back" onClick={() => navigate(-1)}>
             ⬅ Regresar
@@ -100,7 +109,6 @@ function RegisterData() {
           <h3>📈 Gestión de Variables</h3>
         </div>
 
-        {/* TABLA ESTILO SQL */}
         <div className="table-wrapper">
           <table className="sql-table">
             <thead>
@@ -150,26 +158,36 @@ function RegisterData() {
           </table>
         </div>
 
-        {/* FORMULARIO DE DETALLES */}
         <div className="form-card">
           <div className="form-grid-single">
             <label className="form-label">Nombre de la Variable:</label>
+            
+            {/* NUEVO: Mensaje de error en letras rojas */}
+            {errorMsg && (
+              <p style={{ color: "#d32f2f", fontSize: "14px", fontWeight: "bold", margin: "0 0 10px 0" }}>
+                ⚠️ {errorMsg}
+              </p>
+            )}
+
             <input 
               type="text" 
               className="form-input" 
               value={nombre} 
-              /* ✅ VALIDACIÓN AL ESCRIBIR: Solo deja teclear letras y espacios */
+              maxLength={12} // Límite estricto de 12 caracteres
               onChange={(e) => {
                 const val = e.target.value;
                 if (/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]*$/.test(val)) {
                   setNombre(val);
+                  setErrorMsg(""); // Limpiar el error si el usuario empieza a escribir bien
                 }
               }} 
-              placeholder="Ej. Altura, Rendimiento, Peso..."
+              placeholder="Ej. Altura, Peso..."
             />
+            <small style={{ color: "#666", fontSize: "12px", marginTop: "5px", display: "block" }}>
+              Máximo 12 caracteres. Letras y espacios únicamente.
+            </small>
           </div>
 
-          {/* BOTONES DE ACCIÓN DEL FORMULARIO */}
           <div className="action-buttons">
             <button onClick={guardarVariable} className="btn btn-add">
               {editandoId ? "Actualizar" : "Agregar Variable"}
