@@ -20,11 +20,12 @@ function Dashboard() {
     tratamientos: 0
   });
 
-  // Estado para almacenar los cultivos recientes obtenidos del backend
-  const [cultivosRecientes, setCultivosRecientes] = useState([]);
+  // Estados para almacenar los datos reales obtenidos del backend
+  const [cultivos, setCultivos] = useState([]);
+  const [variables, setVariables] = useState([]);
 
   useEffect(() => {
-    // Recuperamos el nombre del usuario logueado desde el almacenamiento local
+    // Recuperamos el nombre del usuario logueado desde el localStorage
     const nombreUsuario = localStorage.getItem("username") || "Investigador";
     setUsuario(nombreUsuario);
 
@@ -32,15 +33,16 @@ function Dashboard() {
       try {
         const headers = getAuthHeaders();
         
-        // Ejecutamos las peticiones simultáneas a la API
-        const [resCultivos, resValores, resExperimentos, resTratamientos] = await Promise.all([
+        // Peticiones simultáneas a la API (incluyendo variables)
+        const [resCultivos, resValores, resExperimentos, resTratamientos, resVariables] = await Promise.all([
           axios.get("https://agro-utc.onrender.com/api/cultivos/", headers).catch(() => ({ data: [] })),
           axios.get("https://agro-utc.onrender.com/api/valores/", headers).catch(() => ({ data: [] })),
           axios.get("https://agro-utc.onrender.com/api/experimentos/", headers).catch(() => ({ data: [] })),
-          axios.get("https://agro-utc.onrender.com/api/tratamientos/", headers).catch(() => ({ data: [] }))
+          axios.get("https://agro-utc.onrender.com/api/tratamientos/", headers).catch(() => ({ data: [] })),
+          axios.get("https://agro-utc.onrender.com/api/variables/", headers).catch(() => ({ data: [] }))
         ]);
 
-        // Actualizamos los contadores de las tarjetas
+        // Actualizamos los contadores de las tarjetas superiores
         setStats({
           cultivos: resCultivos.data.length || 0,
           mediciones: resValores.data.length || 0,
@@ -48,9 +50,9 @@ function Dashboard() {
           tratamientos: resTratamientos.data.length || 0
         });
 
-        // Extraemos y guardamos los últimos cultivos registrados
-        const dataCultivos = resCultivos.data || [];
-        setCultivosRecientes(dataCultivos.slice(0, 5));
+        // Guardamos las listas completas para las dos tablas
+        setCultivos(resCultivos.data || []);
+        setVariables(resVariables.data || []);
 
       } catch (error) {
         console.error("Hubo un error al cargar los datos del dashboard:", error);
@@ -59,21 +61,6 @@ function Dashboard() {
 
     cargarDatos();
   }, []);
-
-  // Función auxiliar para extraer el mes y el año de una fecha
-  const obtenerMesYAno = (fechaString) => {
-    if (!fechaString) return { mes: "N/A", ano: "N/A" };
-    
-    const fecha = new Date(fechaString);
-    // Extraemos el mes en texto (ej. "agosto") y lo ponemos en mayúscula inicial
-    const mesTexto = fecha.toLocaleString('es-ES', { month: 'long' });
-    const mesCapitalizado = mesTexto.charAt(0).toUpperCase() + mesTexto.slice(1);
-    
-    return {
-      mes: mesCapitalizado,
-      ano: fecha.getFullYear()
-    };
-  };
 
   return (
     <div className="page-container">
@@ -124,50 +111,67 @@ function Dashboard() {
           </div>
         </div>
 
-        {/* Sección de Tabla de Cultivos */}
-        <div className="dashboard-bottom">
-          <div className="activity-section" style={{ width: "100%" }}>
-            <h3 className="section-title">🌱 Cultivos Registrados</h3>
+        {/* Sección Inferior: Dos Tablas Lado a Lado */}
+        <div className="dashboard-bottom" style={{ display: "flex", gap: "20px", flexWrap: "wrap" }}>
+          
+          {/* TABLA 1: CULTIVOS REGISTRADOS */}
+          <div className="activity-section" style={{ flex: "1", minWidth: "280px" }}>
+            <h3 className="section-title">🌿 Cultivos Registrados</h3>
             <table className="activity-table" style={{ width: "100%" }}>
               <thead>
                 <tr>
                   <th style={{ textAlign: "left" }}>Nombre del Cultivo</th>
-                  <th style={{ textAlign: "left" }}>Mes</th>
-                  <th style={{ textAlign: "left" }}>Año</th>
                 </tr>
               </thead>
               <tbody>
-                {cultivosRecientes.length > 0 ? (
-                  cultivosRecientes.map((item, index) => {
-                    // Usamos la función auxiliar. Verifica cómo se llama tu campo de fecha en la BD 
-                    // (puede ser fecha_inicio, created_at, fecha, etc.)
-                    const fechaBase = item.fecha_inicio || item.created_at || item.fecha;
-                    const { mes, ano } = obtenerMesYAno(fechaBase);
-
-                    return (
-                      <tr key={index}>
-                        <td style={{ fontWeight: "bold" }}>
-                          {item.nombre || `Cultivo #${item.id || index + 1}`}
-                        </td>
-                        <td style={{ color: "#555", textTransform: "capitalize" }}>
-                          {mes}
-                        </td>
-                        <td style={{ color: "#2c3e50", fontWeight: "bold" }}>
-                          {ano}
-                        </td>
-                      </tr>
-                    );
-                  })
+                {cultivos.length > 0 ? (
+                  cultivos.map((item, index) => (
+                    <tr key={item.id || index}>
+                      <td style={{ fontWeight: "bold", padding: "12px 15px" }}>
+                        {item.nombre}
+                      </td>
+                    </tr>
+                  ))
                 ) : (
                   <tr>
-                    <td colSpan="3" style={{ textAlign: "center", padding: "30px", color: "#888" }}>
-                      No se encontraron cultivos registrados en el servidor.
+                    <td style={{ textAlign: "center", padding: "20px", color: "#888" }}>
+                      No hay cultivos registrados.
                     </td>
                   </tr>
                 )}
               </tbody>
             </table>
           </div>
+
+          {/* TABLA 2: VARIABLES REGISTRADAS */}
+          <div className="activity-section" style={{ flex: "1", minWidth: "280px" }}>
+            <h3 className="section-title">📊 Variables Registradas</h3>
+            <table className="activity-table" style={{ width: "100%" }}>
+              <thead>
+                <tr>
+                  <th style={{ textAlign: "left" }}>Nombre de la Variable</th>
+                </tr>
+              </thead>
+              <tbody>
+                {variables.length > 0 ? (
+                  variables.map((item, index) => (
+                    <tr key={item.id || index}>
+                      <td style={{ fontWeight: "bold", padding: "12px 15px" }}>
+                        {item.nombre}
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td style={{ textAlign: "center", padding: "20px", color: "#888" }}>
+                      No hay variables registradas.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+
         </div>
 
       </main>
