@@ -12,8 +12,10 @@ function VariableForm({
   anio = "Año no especificado"
 }) { 
   const [tratamiento, setTratamiento] = useState("");
-  // NUEVO: Estado para manejar el error del tratamiento
   const [errorTratamiento, setErrorTratamiento] = useState("");
+  
+  // NUEVO: Estado para manejar los mensajes de éxito y error en la interfaz
+  const [mensajeSistema, setMensajeSistema] = useState({ texto: "", tipo: "" });
   
   const [plantas, setPlantas] = useState([
     { id: 1, valores: Array(10).fill("") },
@@ -26,15 +28,21 @@ function VariableForm({
   const [mostrarAnalisis, setMostrarAnalisis] = useState(false);
   const [cargando, setCargando] = useState(false);
 
-  // ESTADOS PARA LA CARGA DESDE EXCEL (Matricial Superior)
   const [mostrarPegar, setMostrarPegar] = useState(false);
   const [textoExcel, setTextoExcel] = useState("");
   const [cargandoBulk, setCargandoBulk] = useState(false);
 
-  // NUEVOS ESTADOS PARA PEGAR REGISTROS DIRECTOS (Inferior)
   const [mostrarPegarDirecto, setMostrarPegarDirecto] = useState(false);
   const [textoExcelDirecto, setTextoExcelDirecto] = useState("");
   const [cargandoDirecto, setCargandoDirecto] = useState(false);
+
+  // NUEVO: Función para mostrar mensajes y ocultarlos automáticamente
+  const mostrarMensaje = (texto, tipo = "error") => {
+    setMensajeSistema({ texto, tipo });
+    setTimeout(() => {
+      setMensajeSistema({ texto: "", tipo: "" });
+    }, 5000); // El mensaje desaparece a los 5 segundos
+  };
 
   const cargarDatos = async () => {
     try {
@@ -55,15 +63,10 @@ function VariableForm({
     if(expId && varId) cargarDatos();
   }, [varId, expId]);
 
-  // NUEVO: Función para validar el input en tiempo real
   const handleTratamientoChange = (e) => {
     const valor = e.target.value;
-    if (valor.length > 12) {
-      setErrorTratamiento("⚠️ El límite es de 12 caracteres.");
-    } else {
-      setErrorTratamiento(""); // Limpia el error si todo está bien
-      setTratamiento(valor);
-    }
+    setErrorTratamiento(""); // Limpia el error mientras escribe
+    setTratamiento(valor);
   };
 
   const handleValorChange = (plantaIndex, repIndex, val) => {
@@ -98,14 +101,15 @@ function VariableForm({
   const promediosActuales = calcularPromediosPorRepeticion();
 
   const guardarDatosPromediados = async () => {
-    // NUEVO: Validación visual sin usar el navegador
     if (!tratamiento.trim()) {
       setErrorTratamiento("⚠️ Por favor, ingresa el nombre del tratamiento.");
       return; 
     }
     
     const hayDatos = promediosActuales.some(p => p !== "");
-    if (!hayDatos) return alert("No hay datos para promediar. Ingresa valores."); // Puedes reemplazar este también si lo deseas
+    if (!hayDatos) {
+      return mostrarMensaje("No hay datos para promediar. Ingresa valores en las tablas.", "error"); 
+    }
 
     setCargando(true);
     try {
@@ -135,18 +139,20 @@ function VariableForm({
       }).filter(p => p !== null);
 
       await Promise.all(promesasGuardado);
-      alert("✅ ¡Promedios guardados con éxito!");
-      limpiarCampos(); cargarDatos(); 
+      
+      mostrarMensaje("✅ ¡Promedios guardados con éxito!", "exito");
+      limpiarCampos(); 
+      cargarDatos(); 
     } catch (error) {
       console.error("Error al guardar:", error);
-      alert("❌ Error al guardar. Revisa la consola.");
+      mostrarMensaje("❌ Error al guardar. Revisa la consola.", "error");
     } finally {
       setCargando(false);
     }
   };
 
   const procesarExcelMatricial = async () => {
-    if (!textoExcel.trim()) return alert("Por favor, pega datos primero.");
+    if (!textoExcel.trim()) return mostrarMensaje("Por favor, pega datos de Excel primero.", "error");
     setCargandoBulk(true);
     
     try {
@@ -225,18 +231,18 @@ function VariableForm({
 
       await Promise.all(promesas);
 
-      alert(`✅ ¡Éxito! Se agruparon las plantas y se guardaron ${promediosGuardados} promedios.`);
+      mostrarMensaje(`✅ ¡Éxito! Se agruparon las plantas y se guardaron ${promediosGuardados} promedios.`, "exito");
       setTextoExcel(""); setMostrarPegar(false); cargarDatos();
     } catch (error) {
       console.error("Error en la importación masiva:", error);
-      alert("❌ Ocurrió un problema guardando las filas. Verifica la consola.");
+      mostrarMensaje("❌ Ocurrió un problema guardando las filas. Verifica el formato.", "error");
     } finally {
       setCargandoBulk(false);
     }
   };
 
   const procesarExcelDirecto = async () => {
-    if (!textoExcelDirecto.trim()) return alert("Por favor, pega datos primero.");
+    if (!textoExcelDirecto.trim()) return mostrarMensaje("Por favor, pega datos primero.", "error");
     setCargandoDirecto(true);
     
     try {
@@ -283,11 +289,11 @@ function VariableForm({
 
       await Promise.all(promesas);
 
-      alert(`✅ ¡Éxito! Se guardaron ${registrosGuardados} registros directamente en la base de datos.`);
+      mostrarMensaje(`✅ ¡Éxito! Se guardaron ${registrosGuardados} registros directamente.`, "exito");
       setTextoExcelDirecto(""); setMostrarPegarDirecto(false); cargarDatos();
     } catch (error) {
       console.error("Error al importar registros directos:", error);
-      alert("❌ Hubo un error al guardar los registros. Verifica que el formato sea el correcto.");
+      mostrarMensaje("❌ Hubo un error al guardar los registros. Verifica que el formato sea el correcto.", "error");
     } finally {
       setCargandoDirecto(false);
     }
@@ -297,16 +303,17 @@ function VariableForm({
     if (!window.confirm("¿Estás seguro de eliminar este registro?")) return;
     try {
       await axios.delete(`https://agro-utc.onrender.com/api/valores/${id}/`, getAuthHeaders());
-      alert("🗑️ Registro eliminado.");
+      mostrarMensaje("🗑️ Registro eliminado correctamente.", "exito");
       cargarDatos();
     } catch (error) {
       console.error("Error al eliminar:", error);
+      mostrarMensaje("❌ No se pudo eliminar el registro.", "error");
     }
   };
 
   const limpiarCampos = () => {
     setTratamiento("");
-    setErrorTratamiento(""); // También limpiamos el error
+    setErrorTratamiento(""); 
     setPlantas([
       { id: 1, valores: Array(10).fill("") },
       { id: 2, valores: Array(10).fill("") },
@@ -323,6 +330,22 @@ function VariableForm({
     <div style={{ backgroundColor: "#fff", padding: "20px", borderRadius: "8px", boxShadow: "0 2px 8px rgba(0,0,0,0.1)" }}>
       <h3 style={{ color: "#0277bd", marginTop: 0, borderBottom: "2px solid #eee", paddingBottom: "10px" }}>📊 Registro de Mediciones - Promedios In Vitro</h3>
 
+      {/* NUEVO: Contenedor global de mensajes del sistema */}
+      {mensajeSistema.texto && (
+        <div style={{
+          padding: "12px",
+          marginBottom: "20px",
+          borderRadius: "6px",
+          fontWeight: "bold",
+          textAlign: "center",
+          backgroundColor: mensajeSistema.tipo === "error" ? "#ffebee" : "#e8f5e9",
+          color: mensajeSistema.tipo === "error" ? "#c62828" : "#2e7d32",
+          border: `1px solid ${mensajeSistema.tipo === "error" ? "#ef9a9a" : "#a5d6a7"}`
+        }}>
+          {mensajeSistema.texto}
+        </div>
+      )}
+
       {/* --- FORMULARIO MANUAL --- */}
       <div style={{ backgroundColor: "#f8f9fa", padding: "15px", borderRadius: "8px", border: "1px solid #e0e0e0", marginBottom: "20px", overflowX: "auto" }}>
         
@@ -331,24 +354,26 @@ function VariableForm({
           <input 
             type="text" 
             value={tratamiento} 
-            onChange={handleTratamientoChange} // Usamos la nueva función
+            maxLength={12} // NUEVO: Límite estricto nativo
+            onChange={handleTratamientoChange} 
             list="trat-list" 
             style={{ 
               width: "100%", 
               padding: "8px", 
               borderRadius: "4px", 
-              border: errorTratamiento ? "2px solid #d32f2f" : "1px solid #ccc", // Borde rojo si hay error
+              border: errorTratamiento ? "2px solid #d32f2f" : "1px solid #ccc", 
               outline: "none"
             }} 
           />
           <datalist id="trat-list">{listaTratamientos.map(t => <option key={t.id} value={t.nombre} />)}</datalist>
           
-          {/* NUEVO: Mensaje de error renderizado en la interfaz */}
+          {/* Mensaje de error local del tratamiento */}
           {errorTratamiento && (
             <span style={{ color: "#d32f2f", fontSize: "12px", marginTop: "4px", display: "block", fontWeight: "500" }}>
               {errorTratamiento}
             </span>
           )}
+          <small style={{ color: "#666", fontSize: "11px", display: "block", marginTop: "3px" }}>Máximo 12 caracteres.</small>
         </div>
 
         <table style={{ width: "100%", borderCollapse: "collapse", minWidth: "600px" }}>
@@ -425,7 +450,7 @@ function VariableForm({
         <button onClick={() => setMostrarAnalisis(!mostrarAnalisis)} style={{ padding: "8px 16px", backgroundColor: "#0288d1", color: "#fff", border: "none", borderRadius: "4px", cursor: "pointer", fontWeight: "bold" }}>📊 Ver Análisis</button>
       </div>
 
-      {/* --- NUEVO: ENCABEZADO FLEXIBLE PARA LA TABLA DE REGISTROS --- */}
+      {/* --- ENCABEZADO FLEXIBLE PARA LA TABLA DE REGISTROS --- */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid #eee", paddingBottom: "10px", marginBottom: "15px" }}>
         <h4 style={{ color: "#424242", margin: 0 }}>Registros en Base de Datos</h4>
         <button onClick={() => setMostrarPegarDirecto(!mostrarPegarDirecto)} style={{ padding: "6px 12px", backgroundColor: "#00897b", color: "#fff", border: "none", borderRadius: "4px", cursor: "pointer", fontSize: "13px", fontWeight: "bold" }}>
@@ -433,7 +458,7 @@ function VariableForm({
         </button>
       </div>
 
-      {/* --- NUEVA SECCIÓN: PEGAR REGISTROS DIRECTOS --- */}
+      {/* --- SECCIÓN: PEGAR REGISTROS DIRECTOS --- */}
       {mostrarPegarDirecto && (
         <div style={{ marginBottom: "15px", padding: "15px", backgroundColor: "#e0f2f1", borderRadius: "6px", border: "1px dashed #00897b" }}>
           <label style={{ display: "block", color: "#00695c", fontWeight: "bold", fontSize: "14px", marginBottom: "5px" }}>
