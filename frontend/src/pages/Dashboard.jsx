@@ -23,7 +23,7 @@ function Dashboard() {
   const actividadesEstaticas = [
     { id: 1, accion: "Registro de medición in vitro", usuario: "Eduardo", fecha: "Hoy, 08:30" },
     { id: 2, accion: "Anomalía detectada (KNN)", usuario: "Sistema", fecha: "Ayer, 14:20" },
-    { id: 3, accion: "Nuevo cultivo 'Fresa' agregado", usuario: "María", fecha: "2 de Ago, 11:00" }
+    { id: 3, accion: "Nuevo cultivo 'Musa acuminata (Banano)' agregado", usuario: "María", fecha: "2 de Ago, 11:00" }
   ];
 
   useEffect(() => {
@@ -103,7 +103,7 @@ function Dashboard() {
           </div>
         </div>
 
-        {/* --- NUEVA SECCIÓN DE ACTIVIDAD Y ACCIONES RÁPIDAS --- */}
+        {/* --- NUEVA SECCIÓN DE ACTIVIDAD Y ESTADO DEL SISTEMA --- */}
         <div className="dashboard-bottom">
           
           <div className="activity-section">
@@ -128,20 +128,22 @@ function Dashboard() {
             </table>
           </div>
 
-          <div className="actions-section">
-            <h3 className="section-title">⚡ Acciones Rápidas</h3>
-            <button className="action-btn btn-green">
-              <span>🌱 Nuevo Cultivo</span>
-              <span>+</span>
-            </button>
-            <button className="action-btn btn-blue">
-              <span>📊 Registrar Medición</span>
-              <span>+</span>
-            </button>
-            <button className="action-btn btn-orange">
-              <span>📈 Reportes Anomaly</span>
-              <span>→</span>
-            </button>
+          <div className="status-section">
+            <h3 className="section-title">🌡️ Estado del Sistema</h3>
+            <ul className="status-list">
+              <li className="status-item">
+                <span><strong>Servidor BD</strong></span>
+                <span>En línea 🟢</span>
+              </li>
+              <li className="status-item">
+                <span><strong>Modelo KNN</strong></span>
+                <span>Activo 🟢</span>
+              </li>
+              <li className="status-item">
+                <span><strong>Último respaldo</strong></span>
+                <span>Hace 2h 🟢</span>
+              </li>
+            </ul>
           </div>
 
         </div>

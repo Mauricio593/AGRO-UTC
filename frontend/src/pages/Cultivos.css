@@ -122,3 +122,81 @@
 
 .context-option-row:hover { background-color: #f1f8e9; }
 .delete-option:hover { background-color: #ffebee; color: #d32f2f; }
+/* --- ESTILOS PARA LA VENTANA MODAL PERSONALIZADA --- */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-box {
+  background: white;
+  padding: 25px;
+  border-radius: 10px;
+  width: 90%;
+  max-width: 400px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  text-align: center;
+}
+
+.modal-box h3 {
+  margin-top: 0;
+  color: #333;
+}
+
+.modal-box input {
+  width: 90%;
+  padding: 10px;
+  margin-top: 15px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  font-size: 1rem;
+}
+
+/* Letras rojas para advertencias */
+.texto-error {
+  color: #e74c3c;
+  font-size: 0.85rem;
+  font-weight: bold;
+  margin-top: 8px;
+  min-height: 18px; 
+  display: block;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: space-around;
+  margin-top: 20px;
+}
+
+.btn-cancelar {
+  background: #bdc3c7;
+  color: #333;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.btn-guardar {
+  background: #27ae60;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.btn-guardar:disabled {
+  background: #95a5a6;
+  cursor: not-allowed;
+}

@@ -10,6 +10,17 @@ function Cultivos() {
   const [mostrarForm, setMostrarForm] = useState(false);
   const [menuContext, setMenuContext] = useState({ visible: false, x: 0, y: 0, tipo: "", id: "" });
 
+  // NUEVO: Estado para controlar nuestra ventana modal personalizada
+  const [modal, setModal] = useState({
+    visible: false,
+    accion: "", // 'agregar', 'editar', 'eliminar', 'alerta'
+    tipo: "",
+    id: null,
+    valor: "",
+    error: "",
+    mensaje: ""
+  });
+
   const cargarCultivos = () => API.get("cultivos/").then(res => setListas(p => ({ ...p, cultivos: res.data })));
   const cargarVariables = () => API.get("variables/").then(res => setListas(p => ({ ...p, variables: res.data })));
   
@@ -37,115 +48,118 @@ function Cultivos() {
     setMostrarForm(false);
   }, [sel.lote]);
 
-  // --- LÓGICA PARA AGREGAR, EDITAR Y ELIMINAR DESDE LOS FILTROS ---
-  const manejarAccionAPI = async (metodo, endpoint, payload = null, mensajeExito) => {
-    try {
-      if (metodo === 'POST') await API.post(endpoint, payload);
-      if (metodo === 'PUT') await API.put(endpoint, payload);
-      if (metodo === 'DELETE') await API.delete(endpoint);
-      alert(mensajeExito);
-      return true;
-    } catch (error) {
-      console.error("Error API:", error);
-      alert("❌ Ocurrió un error. Revisa que los datos sean correctos y no estén duplicados.");
-      return false;
-    }
-  };
-
-  const agregarItem = async (tipo) => {
-    const mensajePrompt = tipo === 'experimento' 
-      ? `📝 Ingresa el AÑO para la nueva campaña (Ej: 2024):` 
-      : `📝 Ingresa el nombre para el nuevo ${tipo}:`;
-
-    const inputUsuario = window.prompt(mensajePrompt);
-    
-    if (!inputUsuario || inputUsuario.trim() === "") return;
-    const valorPuro = inputUsuario.trim();
-
-    let endpoint = ""; let payload = {};
-
-    if (tipo === 'experimento') {
-      const anioNum = Number(valorPuro);
-      if (!Number.isInteger(anioNum) || anioNum <= 0 || valorPuro.length > 4) {
-        return alert("❌ Error: El año de la campaña debe ser numérico, positivo y de máximo 4 dígitos.");
-      }
-      endpoint = "experimentos/"; 
-      payload = { anio: anioNum, unidad: sel.lote };
-    } else {
-      const soloLetrasRegex = /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/;
-      if (!soloLetrasRegex.test(valorPuro)) {
-        return alert(`❌ Error: El nombre para '${tipo}' solo puede contener letras y espacios. No se permiten números ni símbolos.`);
-      }
-
-      if (tipo === 'cultivo') { endpoint = "cultivos/"; payload = { nombre: valorPuro }; }
-      if (tipo === 'lote') { endpoint = "unidades/"; payload = { nombre: valorPuro, cultivo: sel.cultivo }; }
-      if (tipo === 'variable') { endpoint = "variables/"; payload = { nombre: valorPuro }; }
-    }
-
-    const exito = await manejarAccionAPI('POST', endpoint, payload, `✅ ${tipo} agregado correctamente.`);
-    if (exito) refrescarLista(tipo);
-  };
-
-  const editarItem = async () => {
-    const { tipo, id } = menuContext;
-    cerrarMenu();
-
-    const mensajePrompt = tipo === 'experimento' 
-      ? `✏️ Ingresa el NUEVO AÑO para esta campaña:` 
-      : `✏️ Ingresa el nuevo nombre para este ${tipo}:`;
-
-    const inputUsuario = window.prompt(mensajePrompt);
-    
-    if (!inputUsuario || inputUsuario.trim() === "") return;
-    const valorPuro = inputUsuario.trim();
-
-    let endpoint = ""; let payload = {};
-
-    if (tipo === 'experimento') {
-      const anioNum = Number(valorPuro);
-      if (!Number.isInteger(anioNum) || anioNum <= 0 || valorPuro.length > 4) {
-        return alert("❌ Error: El año de la campaña debe ser numérico, positivo y de máximo 4 dígitos.");
-      }
-      endpoint = `experimentos/${id}/`; 
-      payload = { anio: anioNum, unidad: sel.lote };
-    } else {
-      const soloLetrasRegex = /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/;
-      if (!soloLetrasRegex.test(valorPuro)) {
-        return alert(`❌ Error: El nombre para '${tipo}' solo puede contener letras y espacios. No se permiten números ni símbolos.`);
-      }
-
-      if (tipo === 'cultivo') { endpoint = `cultivos/${id}/`; payload = { nombre: valorPuro }; }
-      if (tipo === 'lote') { endpoint = `unidades/${id}/`; payload = { nombre: valorPuro, cultivo: sel.cultivo }; }
-      if (tipo === 'variable') { endpoint = `variables/${id}/`; payload = { nombre: valorPuro }; }
-    }
-
-    const exito = await manejarAccionAPI('PUT', endpoint, payload, `🔄 ${tipo} actualizado.`);
-    if (exito) refrescarLista(tipo);
-  };
-
-  const eliminarItem = async () => {
-    const { tipo, id } = menuContext;
-    cerrarMenu();
-    if (!window.confirm(`⚠️ ¿ESTÁS SEGURO? Eliminar este ${tipo} borrará todos los datos asociados a él.`)) return;
-
-    let endpoint = "";
-    if (tipo === 'cultivo') endpoint = `cultivos/${id}/`;
-    if (tipo === 'lote') endpoint = `unidades/${id}/`;
-    if (tipo === 'experimento') endpoint = `experimentos/${id}/`;
-    if (tipo === 'variable') endpoint = `variables/${id}/`;
-
-    const exito = await manejarAccionAPI('DELETE', endpoint, null, `🗑️ ${tipo} eliminado.`);
-    if (exito) {
-      setSel(p => ({ ...p, [tipo]: "" }));
-      refrescarLista(tipo);
-    }
-  };
 
   const refrescarLista = (tipo) => {
     if (tipo === 'cultivo') cargarCultivos();
     if (tipo === 'lote') cargarLotes(sel.cultivo);
     if (tipo === 'experimento') cargarExperimentos(sel.lote);
     if (tipo === 'variable') cargarVariables();
+  };
+
+  // --- LÓGICA DE VALIDACIÓN EN TIEMPO REAL ---
+  const manejarCambioInput = (e) => {
+    const valor = e.target.value;
+    let error = "";
+
+    if (modal.tipo === 'experimento') {
+      // Validaciones para AÑO (Máximo 4 números)
+      if (valor.length > 4) {
+        error = "❌ El año permite máximo 4 dígitos.";
+      } else if (valor !== "" && !/^\d+$/.test(valor)) {
+        error = "❌ Solo se permiten números para el año.";
+      }
+    } else {
+      // Validaciones para NOMBRES (Máximo 12 caracteres, solo letras)
+      if (valor.length > 12) {
+        error = "❌ Límite excedido: Máximo 12 caracteres.";
+      } else if (valor !== "" && !/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/.test(valor)) {
+        error = "❌ Solo se permiten letras y espacios.";
+      }
+    }
+
+    // Actualizamos el estado con el valor y el posible error
+    setModal({ ...modal, valor, error });
+  };
+
+  // --- ABRIR MODALES (Reemplaza a window.prompt / confirm) ---
+  const abrirModalAgregar = (tipo) => {
+    setModal({ visible: true, accion: 'agregar', tipo, id: null, valor: "", error: "", mensaje: `Agregar nuevo ${tipo}` });
+  };
+
+  const abrirModalEditar = () => {
+    const { tipo, id } = menuContext;
+    cerrarMenu();
+    setModal({ visible: true, accion: 'editar', tipo, id, valor: "", error: "", mensaje: `Editar ${tipo}` });
+  };
+
+  const abrirModalEliminar = () => {
+    const { tipo, id } = menuContext;
+    cerrarMenu();
+    setModal({ 
+      visible: true, 
+      accion: 'eliminar', 
+      tipo, 
+      id, 
+      valor: "", 
+      error: "", 
+      mensaje: `⚠️ ¿Estás seguro de eliminar este ${tipo}? Se perderán todos sus datos.` 
+    });
+  };
+
+  const mostrarAlerta = (mensaje) => {
+    setModal({ visible: true, accion: 'alerta', tipo: "", id: null, valor: "", error: "", mensaje });
+  };
+
+  // --- EJECUCIÓN DE API DESDE EL MODAL ---
+  const confirmarAccionModal = async () => {
+    const { accion, tipo, id, valor } = modal;
+    const valorPuro = valor.trim();
+
+    // Validar antes de enviar si es agregar/editar
+    if ((accion === 'agregar' || accion === 'editar') && (valorPuro === "" || modal.error !== "")) {
+      return; // No hace nada si está vacío o hay errores
+    }
+
+    let endpoint = ""; 
+    let payload = {};
+    let metodo = "";
+
+    // Configurar payload y endpoint
+    if (accion === 'eliminar') {
+      metodo = 'DELETE';
+      if (tipo === 'cultivo') endpoint = `cultivos/${id}/`;
+      if (tipo === 'lote') endpoint = `unidades/${id}/`;
+      if (tipo === 'experimento') endpoint = `experimentos/${id}/`;
+      if (tipo === 'variable') endpoint = `variables/${id}/`;
+    } else {
+      metodo = accion === 'agregar' ? 'POST' : 'PUT';
+      
+      if (tipo === 'experimento') {
+        endpoint = accion === 'agregar' ? "experimentos/" : `experimentos/${id}/`;
+        payload = { anio: Number(valorPuro), unidad: sel.lote };
+      } else {
+        if (tipo === 'cultivo') { endpoint = accion === 'agregar' ? "cultivos/" : `cultivos/${id}/`; payload = { nombre: valorPuro }; }
+        if (tipo === 'lote') { endpoint = accion === 'agregar' ? "unidades/" : `unidades/${id}/`; payload = { nombre: valorPuro, cultivo: sel.cultivo }; }
+        if (tipo === 'variable') { endpoint = accion === 'agregar' ? "variables/" : `variables/${id}/`; payload = { nombre: valorPuro }; }
+      }
+    }
+
+    try {
+      if (metodo === 'POST') await API.post(endpoint, payload);
+      if (metodo === 'PUT') await API.put(endpoint, payload);
+      if (metodo === 'DELETE') {
+        await API.delete(endpoint);
+        setSel(p => ({ ...p, [tipo]: "" }));
+      }
+      
+      setModal({ ...modal, visible: false }); // Cerramos modal con éxito
+      mostrarAlerta(`✅ Operación realizada con éxito.`);
+      refrescarLista(tipo);
+
+    } catch (error) {
+      console.error("Error API:", error);
+      mostrarAlerta("❌ Ocurrió un error. Revisa que los datos sean correctos.");
+    }
   };
 
   const handleRightClick = (e, tipo, id) => {
@@ -158,16 +172,14 @@ function Cultivos() {
 
   const manejarCargaDatos = () => {
     if (!sel.cultivo || !sel.lote || !sel.experimento || !sel.variable) {
-      alert("⚠️ Por favor, selecciona todos los filtros (Cultivo, Lote, Año y Variable) para continuar.");
+      mostrarAlerta("⚠️ Por favor, selecciona todos los filtros (Cultivo, Lote, Año y Variable) para continuar.");
       return;
     }
     setMostrarForm(true);
   };
 
-  // 📝 AQUÍ BUSCAMOS LOS NOMBRES REALES EN BASE A LOS IDs SELECCIONADOS
   const nombreCultivoActual = listas.cultivos.find(c => c.id.toString() === sel.cultivo.toString())?.nombre || "Cultivo no especificado";
   const nombreVariableActual = listas.variables.find(v => v.id.toString() === sel.variable.toString())?.nombre || "Variable no especificada";
-  // ✅ NUEVO: Buscamos el nombre del lote (mes) y el año
   const nombreLoteActual = listas.lotes.find(l => l.id.toString() === sel.lote.toString())?.nombre || "Mes no especificado";
   const anioActual = listas.experimentos.find(e => e.id.toString() === sel.experimento.toString())?.anio || "Año no especificado";
 
@@ -179,7 +191,6 @@ function Cultivos() {
         
         <main className="workspace-left">
           {mostrarForm ? (
-            // ✅ NUEVO: Pasamos nombreLote y anio como props
             <VariableForm 
               expId={sel.experimento} 
               varId={sel.variable} 
@@ -207,29 +218,29 @@ function Cultivos() {
                 <option value="">Seleccione...</option>
                 {listas.cultivos.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
               </select>
-              <button onClick={() => agregarItem('cultivo')} title="Añadir">+</button>
+              <button onClick={() => abrirModalAgregar('cultivo')} title="Añadir">+</button>
             </div>
           </div>
 
           <div className="filter-box-vertical">
-            <label>mes :</label>
+            <label>Mes:</label>
             <div className="select-row">
               <select value={sel.lote} disabled={!sel.cultivo} onChange={(e) => setSel({...sel, lote: e.target.value})} onContextMenu={(e) => handleRightClick(e, "lote", sel.lote)}>
                 <option value="">Seleccione...</option>
                 {listas.lotes.map(l => <option key={l.id} value={l.id}>{l.nombre}</option>)}
               </select>
-              <button onClick={() => agregarItem('lote')} disabled={!sel.cultivo} title="Añadir">+</button>
+              <button onClick={() => abrirModalAgregar('lote')} disabled={!sel.cultivo} title="Añadir">+</button>
             </div>
           </div>
 
           <div className="filter-box-vertical">
-            <label> (Año):</label>
+            <label>(Año):</label>
             <div className="select-row">
               <select value={sel.experimento} disabled={!sel.lote} onChange={(e) => setSel({...sel, experimento: e.target.value})} onContextMenu={(e) => handleRightClick(e, "experimento", sel.experimento)}>
                 <option value="">Seleccione...</option>
                 {listas.experimentos.map(e => <option key={e.id} value={e.id}>{e.anio}</option>)}
               </select>
-              <button onClick={() => agregarItem('experimento')} disabled={!sel.lote} title="Añadir">+</button>
+              <button onClick={() => abrirModalAgregar('experimento')} disabled={!sel.lote} title="Añadir">+</button>
             </div>
           </div>
 
@@ -240,7 +251,7 @@ function Cultivos() {
                 <option value="">Seleccione...</option>
                 {listas.variables.map(v => <option key={v.id} value={v.id}>{v.nombre}</option>)}
               </select>
-              <button onClick={() => agregarItem('variable')} title="Añadir">+</button>
+              <button onClick={() => abrirModalAgregar('variable')} title="Añadir">+</button>
             </div>
           </div>
 
@@ -253,10 +264,47 @@ function Cultivos() {
 
       {menuContext.visible && (
         <div className="floating-context-menu" style={{ top: menuContext.y, left: menuContext.x }} onClick={(e) => e.stopPropagation()}>
-          <div className="context-option-row" onClick={editarItem}><span>✏️ Editar {menuContext.tipo}</span></div>
-          <div className="context-option-row delete-option" onClick={eliminarItem}><span>🗑️ Eliminar {menuContext.tipo}</span></div>
+          <div className="context-option-row" onClick={abrirModalEditar}><span>✏️ Editar {menuContext.tipo}</span></div>
+          <div className="context-option-row delete-option" onClick={abrirModalEliminar}><span>🗑️ Eliminar {menuContext.tipo}</span></div>
         </div>
       )}
+
+      {/* --- ESTRUCTURA DE LA VENTANA MODAL PERSONALIZADA --- */}
+      {modal.visible && (
+        <div className="modal-overlay">
+          <div className="modal-box">
+            <h3>{modal.mensaje}</h3>
+            
+            {/* Si es agregar o editar, mostramos el Input */}
+            {(modal.accion === 'agregar' || modal.accion === 'editar') && (
+              <>
+                <input 
+                  type="text" 
+                  placeholder={modal.tipo === 'experimento' ? "Ej: 2024" : `Nombre de ${modal.tipo}`}
+                  value={modal.valor}
+                  onChange={manejarCambioInput}
+                />
+                {/* Aquí renderizamos las letras rojas de advertencia si hay un error */}
+                <span className="texto-error">{modal.error}</span>
+              </>
+            )}
+
+            <div className="modal-actions">
+              {modal.accion !== 'alerta' && (
+                <button className="btn-cancelar" onClick={() => setModal({ ...modal, visible: false })}>Cancelar</button>
+              )}
+              <button 
+                className="btn-guardar" 
+                onClick={modal.accion === 'alerta' ? () => setModal({ ...modal, visible: false }) : confirmarAccionModal}
+                disabled={modal.error !== "" || (modal.valor === "" && modal.accion !== 'eliminar' && modal.accion !== 'alerta')}
+              >
+                {modal.accion === 'alerta' ? 'Aceptar' : (modal.accion === 'eliminar' ? 'Sí, Eliminar' : 'Guardar')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

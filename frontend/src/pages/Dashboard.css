@@ -6,7 +6,7 @@
 }
 
 .dashboard {
-  padding: 15px 30px; /* Reducimos el padding superior para ahorrar espacio[cite: 9] */
+  padding: 15px 30px; 
 }
 
 /* Cabecera del Dashboard */
@@ -14,8 +14,8 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 30px; /* Reducimos el espacio entre logos y texto[cite: 9] */
-  margin-bottom: 20px; /* Menor margen inferior[cite: 9] */
+  gap: 30px; 
+  margin-bottom: 20px; 
 }
 
 .header-text {
@@ -24,73 +24,73 @@
 
 .header-text h1 {
   color: #2c3e50;
-  font-size: 1.8rem; /* Letra más pequeña[cite: 9] */
+  font-size: 1.8rem; 
   margin-bottom: 5px;
   margin-top: 0;
 }
 
 .header-text p {
   color: #7f8c8d;
-  font-size: 0.95rem; /* Texto secundario más pequeño */
+  font-size: 0.95rem; 
   margin: 0;
 }
 
-/* Logos más pequeños para evitar el scroll[cite: 9] */
+/* Logos más pequeños para evitar el scroll */
 .dashboard-logo {
-  max-width: 100px; /* Reducido de 150px/180px a 100px[cite: 9] */
+  max-width: 100px; 
   height: auto;
-  border-radius: 100px; /*[cite: 9] */
-  box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.15); /*[cite: 9] */
-  object-fit: cover; /*[cite: 9] */
+  border-radius: 100px;
+  box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.15);
+  object-fit: cover;
 }
 
 /* Tarjetas Estadísticas */
 .cards {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); /* Tarjetas más angostas[cite: 9] */
-  gap: 15px; /* Menor separación entre tarjetas[cite: 9] */
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); 
+  gap: 15px; 
 }
 
 .card {
   background: white;
-  padding: 12px; /* Reducido de 20px a 12px para hacerlas más pequeñas[cite: 9] */
+  padding: 12px; 
   border-radius: 10px;
-  box-shadow: 0px 2px 8px rgba(62, 17, 226, 0.3); /* Sombra más sutil */
+  box-shadow: 0px 2px 8px rgba(62, 17, 226, 0.3); 
   text-align: center;
-  border: 1px solid transparent; /*[cite: 9] */
+  border: 1px solid transparent;
 }
 
 .card h3 {
   margin: 0;
   color: #555;
-  font-size: 1rem; /* Letra de títulos más pequeña[cite: 9] */
+  font-size: 1rem; 
 }
 
 .card p {
   margin: 0;
   color: #888;
-  font-size: 0.8rem; /*[cite: 9] */
+  font-size: 0.8rem;
 }
 
 /* Números de las tarjetas */
 .stat-number {
-  font-size: 2rem; /* Reducido drásticamente de 3rem a 2rem[cite: 9] */
-  margin: 8px 0; /* Menor margen vertical[cite: 9] */
-  color: #27ae60; /*[cite: 9] */
-  font-weight: bold; /*[cite: 9] */
+  font-size: 2rem; 
+  margin: 8px 0; 
+  color: #27ae60;
+  font-weight: bold;
 }
 
-.text-blue { color: #2980b9; } /*[cite: 9] */
-.text-purple { color: #8e44ad; } /*[cite: 9] */
-.text-orange { color: #e67e22; } /*[cite: 9] */
-.text-success { color: #16a085; font-size: 1.8rem; } /*[cite: 9] */
+.text-blue { color: #2980b9; }
+.text-purple { color: #8e44ad; }
+.text-orange { color: #e67e22; }
+.text-success { color: #16a085; font-size: 1.8rem; }
 
 .knn-card {
-  background: #f4fdf8; /*[cite: 9] */
-  border-color: #a3e4d7; /*[cite: 9] */
+  background: #f4fdf8;
+  border-color: #a3e4d7;
 }
 
-/* --- NUEVAS SECCIONES --- */
+/* --- SECCIÓN DE ACTIVIDADES Y ESTADO --- */
 .dashboard-bottom {
   display: flex;
   gap: 20px;
@@ -98,24 +98,24 @@
   flex-wrap: wrap;
 }
 
-.activity-section, .actions-section {
+.activity-section {
+  flex: 2;
+  min-width: 300px;
   background: #fff;
   padding: 15px;
   border-radius: 10px;
   box-shadow: 0 4px 6px rgba(0,0,0,0.05);
 }
 
-.activity-section {
-  flex: 2;
-  min-width: 300px;
-}
-
-.actions-section {
+.status-section {
   flex: 1;
   min-width: 250px;
+  background: #fff;
+  padding: 15px;
+  border-radius: 10px;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.05);
   display: flex;
   flex-direction: column;
-  gap: 10px;
 }
 
 .section-title {
@@ -147,20 +147,28 @@
   font-size: 0.85rem;
 }
 
-/* Botones de acción rápida */
-.action-btn {
-  padding: 10px 15px;
-  border-radius: 8px;
-  cursor: pointer;
-  font-weight: bold;
+/* Lista de Estado del Sistema */
+.status-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.status-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  padding: 10px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  border-left: 4px solid #2ecc71; 
   font-size: 0.9rem;
-  border-width: 1px;
-  border-style: solid;
+  color: #444;
 }
 
-.btn-green { background-color: #e8f5e9; color: #2e7d32; border-color: #a5d6a7; }
-.btn-blue { background-color: #e3f2fd; color: #1565c0; border-color: #90caf9; }
-.btn-orange { background-color: #fff3e0; color: #ef6c00; border-color: #ffcc80; }
+.status-item.warning {
+  border-left-color: #f39c12; 
+}
