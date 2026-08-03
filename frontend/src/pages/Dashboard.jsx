@@ -32,13 +32,16 @@ function Dashboard() {
       try {
         const headers = getAuthHeaders();
         
-        // Hacemos todas las peticiones al mismo tiempo, incluyendo la de accesos
+        // Hacemos todas las peticiones al mismo tiempo
         const [resCultivos, resValores, resExperimentos, resTratamientos, resAccesos] = await Promise.all([
           axios.get("https://agro-utc.onrender.com/api/cultivos/", headers).catch(() => ({ data: [] })),
           axios.get("https://agro-utc.onrender.com/api/valores/", headers).catch(() => ({ data: [] })),
           axios.get("https://agro-utc.onrender.com/api/experimentos/", headers).catch(() => ({ data: [] })),
           axios.get("https://agro-utc.onrender.com/api/tratamientos/", headers).catch(() => ({ data: [] })),
-          axios.get("https://agro-utc.onrender.com/api/accesos/", headers).catch(() => ({ data: [] }))
+          axios.get("https://agro-utc.onrender.com/api/accesos/", headers).catch((err) => {
+            console.error("Error en petición de accesos:", err);
+            return { data: [] };
+          })
         ]);
 
         // Actualizamos los contadores
@@ -49,8 +52,22 @@ function Dashboard() {
           tratamientos: resTratamientos.data.length || 0
         });
 
+        // --- LÓGICA MEJORADA PARA EXTRAER LOS ACCESOS ---
+        const dataAccesos = resAccesos.data;
+        console.log("Respuesta del servidor para accesos:", dataAccesos); // <- Te ayudará a depurar
+
+        let listaAccesos = [];
+        
+        // Verificamos en qué formato viene la respuesta para extraer el arreglo correctamente
+        if (Array.isArray(dataAccesos)) {
+          listaAccesos = dataAccesos;
+        } else if (dataAccesos && Array.isArray(dataAccesos.accesos)) {
+          listaAccesos = dataAccesos.accesos;
+        } else if (dataAccesos && Array.isArray(dataAccesos.results)) {
+          listaAccesos = dataAccesos.results;
+        }
+
         // Guardamos los últimos accesos (limitamos a los 5 más recientes)
-        const listaAccesos = resAccesos.data || []; 
         setActividades(listaAccesos.slice(0, 5));
 
       } catch (error) {
@@ -111,14 +128,15 @@ function Dashboard() {
 
         <div className="dashboard-bottom">
           
-          <div className="activity-section">
+          {/* Hemos agregado style={{ width: "100%" }} para que ocupe todo el espacio libre */}
+          <div className="activity-section" style={{ width: "100%" }}>
             <h3 className="section-title">🕒 Actividad Reciente</h3>
-            <table className="activity-table">
+            <table className="activity-table" style={{ width: "100%" }}>
               <thead>
                 <tr>
-                  <th>Evento</th>
-                  <th>Usuario</th>
-                  <th>Fecha</th>
+                  <th style={{ textAlign: "left" }}>Evento</th>
+                  <th style={{ textAlign: "left" }}>Usuario</th>
+                  <th style={{ textAlign: "left" }}>Fecha</th>
                 </tr>
               </thead>
               <tbody>
@@ -127,18 +145,21 @@ function Dashboard() {
                   actividades.map((item, index) => (
                     <tr key={index}>
                       <td>Inicio de sesión en el sistema</td>
-                      <td style={{ fontWeight: "bold" }}>{item.usuario?.username || item.usuario || "Usuario"}</td>
+                      <td style={{ fontWeight: "bold" }}>
+                        {/* Buscamos el nombre del usuario en diferentes posibles propiedades */}
+                        {item.usuario?.username || item.usuario || item.username || "Usuario"}
+                      </td>
                       <td style={{ color: "#777" }}>
-                        {new Date(item.fecha_ingreso).toLocaleString("es-ES", {
+                        {item.fecha_ingreso ? new Date(item.fecha_ingreso).toLocaleString("es-ES", {
                           day: 'numeric', month: 'short', hour: '2-digit', minute:'2-digit'
-                        })}
+                        }) : "Fecha desconocida"}
                       </td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="3" style={{ textAlign: "center", padding: "20px", color: "#888" }}>
-                      Cargando actividad reciente o sin datos...
+                    <td colSpan="3" style={{ textAlign: "center", padding: "30px", color: "#888" }}>
+                      No se encontraron registros de actividad reciente en el servidor.
                     </td>
                   </tr>
                 )}
@@ -146,27 +167,7 @@ function Dashboard() {
             </table>
           </div>
 
-          <div className="status-section">
-            <h3 className="section-title">🌡️ Estado del Sistema</h3>
-            <ul className="status-list">
-              <li className="status-item">
-                <span><strong>Servidor BD</strong></span>
-                <span>En línea 🟢</span>
-              </li>
-              <li className="status-item">
-                <span><strong>Modelo KNN</strong></span>
-                <span>Activo 🟢</span>
-              </li>
-              <li className="status-item warning">
-                <span><strong>Sensores Cámara 1</strong></span>
-                <span>Revisión 🟠</span>
-              </li>
-              <li className="status-item">
-                <span><strong>Último respaldo</strong></span>
-                <span>Hace 2h 🟢</span>
-              </li>
-            </ul>
-          </div>
+          {/* SE ELIMINÓ LA SECCIÓN DE "ESTADO DEL SISTEMA" */}
 
         </div>
 
