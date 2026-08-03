@@ -20,8 +20,8 @@ function Dashboard() {
     tratamientos: 0
   });
 
-  // Estado para almacenar las mediciones reales obtenidas del backend
-  const [medicionesRecientes, setMedicionesRecientes] = useState([]);
+  // Estado para almacenar los cultivos recientes obtenidos del backend
+  const [cultivosRecientes, setCultivosRecientes] = useState([]);
 
   useEffect(() => {
     // Recuperamos el nombre del usuario logueado desde el almacenamiento local
@@ -48,9 +48,9 @@ function Dashboard() {
           tratamientos: resTratamientos.data.length || 0
         });
 
-        // Extraemos y guardamos las últimas 5 mediciones reales
-        const dataValores = resValores.data || [];
-        setMedicionesRecientes(dataValores.slice(0, 5));
+        // Extraemos y guardamos los últimos cultivos registrados
+        const dataCultivos = resCultivos.data || [];
+        setCultivosRecientes(dataCultivos.slice(0, 5));
 
       } catch (error) {
         console.error("Hubo un error al cargar los datos del dashboard:", error);
@@ -59,6 +59,21 @@ function Dashboard() {
 
     cargarDatos();
   }, []);
+
+  // Función auxiliar para extraer el mes y el año de una fecha
+  const obtenerMesYAno = (fechaString) => {
+    if (!fechaString) return { mes: "N/A", ano: "N/A" };
+    
+    const fecha = new Date(fechaString);
+    // Extraemos el mes en texto (ej. "agosto") y lo ponemos en mayúscula inicial
+    const mesTexto = fecha.toLocaleString('es-ES', { month: 'long' });
+    const mesCapitalizado = mesTexto.charAt(0).toUpperCase() + mesTexto.slice(1);
+    
+    return {
+      mes: mesCapitalizado,
+      ano: fecha.getFullYear()
+    };
+  };
 
   return (
     <div className="page-container">
@@ -109,41 +124,44 @@ function Dashboard() {
           </div>
         </div>
 
-        {/* Sección de Tabla de Mediciones Real */}
+        {/* Sección de Tabla de Cultivos */}
         <div className="dashboard-bottom">
           <div className="activity-section" style={{ width: "100%" }}>
-            <h3 className="section-title">📊 Últimas Mediciones Registradas</h3>
+            <h3 className="section-title">🌱 Cultivos Registrados</h3>
             <table className="activity-table" style={{ width: "100%" }}>
               <thead>
                 <tr>
-                  <th style={{ textAlign: "left" }}>ID Exp.</th>
-                  <th style={{ textAlign: "left" }}>Tratamiento</th>
-                  <th style={{ textAlign: "left" }}>Variable</th>
-                  <th style={{ textAlign: "left" }}>Valor</th>
+                  <th style={{ textAlign: "left" }}>Nombre del Cultivo</th>
+                  <th style={{ textAlign: "left" }}>Mes</th>
+                  <th style={{ textAlign: "left" }}>Año</th>
                 </tr>
               </thead>
               <tbody>
-                {medicionesRecientes.length > 0 ? (
-                  medicionesRecientes.map((item, index) => (
-                    <tr key={index}>
-                      <td style={{ fontWeight: "bold" }}>
-                        {item.experimento?.nombre || item.experimento || "N/A"}
-                      </td>
-                      <td>
-                        {item.tratamiento?.nombre || item.tratamiento || "N/A"}
-                      </td>
-                      <td style={{ color: "#555" }}>
-                        {item.variable?.nombre || item.variable || "N/A"}
-                      </td>
-                      <td style={{ color: "#e67e22", fontWeight: "bold" }}>
-                        {item.valor}
-                      </td>
-                    </tr>
-                  ))
+                {cultivosRecientes.length > 0 ? (
+                  cultivosRecientes.map((item, index) => {
+                    // Usamos la función auxiliar. Verifica cómo se llama tu campo de fecha en la BD 
+                    // (puede ser fecha_inicio, created_at, fecha, etc.)
+                    const fechaBase = item.fecha_inicio || item.created_at || item.fecha;
+                    const { mes, ano } = obtenerMesYAno(fechaBase);
+
+                    return (
+                      <tr key={index}>
+                        <td style={{ fontWeight: "bold" }}>
+                          {item.nombre || `Cultivo #${item.id || index + 1}`}
+                        </td>
+                        <td style={{ color: "#555", textTransform: "capitalize" }}>
+                          {mes}
+                        </td>
+                        <td style={{ color: "#2c3e50", fontWeight: "bold" }}>
+                          {ano}
+                        </td>
+                      </tr>
+                    );
+                  })
                 ) : (
                   <tr>
-                    <td colSpan="4" style={{ textAlign: "center", padding: "30px", color: "#888" }}>
-                      No se encontraron mediciones registradas en el servidor.
+                    <td colSpan="3" style={{ textAlign: "center", padding: "30px", color: "#888" }}>
+                      No se encontraron cultivos registrados en el servidor.
                     </td>
                   </tr>
                 )}
