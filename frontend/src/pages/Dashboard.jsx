@@ -12,6 +12,7 @@ import "./Dashboard.css";
 function Dashboard() {
   const [usuario, setUsuario] = useState("");
 
+  // Estado para las tarjetas superiores
   const [stats, setStats] = useState({
     cultivos: 0,
     mediciones: 0,
@@ -19,40 +20,45 @@ function Dashboard() {
     tratamientos: 0
   });
 
-  // Datos simulados (mock data) para la tabla visual
-  const actividadesEstaticas = [
-    { id: 1, accion: "Registro de medición in vitro", usuario: "Eduardo", fecha: "Hoy, 08:30" },
-    { id: 2, accion: "Anomalía detectada (KNN)", usuario: "Sistema", fecha: "Ayer, 14:20" },
-    { id: 3, accion: "Nuevo cultivo 'Musa acuminata (Banano)' agregado", usuario: "María", fecha: "2 de Ago, 11:00" }
-  ];
+  // Estado para almacenar los datos reales de la base de datos
+  const [actividades, setActividades] = useState([]);
 
   useEffect(() => {
+    // Obtenemos el nombre del usuario activo
     const nombreUsuario = localStorage.getItem("username") || "Investigador";
     setUsuario(nombreUsuario);
 
-    const cargarEstadisticas = async () => {
+    const cargarDatos = async () => {
       try {
         const headers = getAuthHeaders();
         
-        const [resCultivos, resValores, resExperimentos, resTratamientos] = await Promise.all([
+        // Hacemos todas las peticiones al mismo tiempo, incluyendo la de accesos
+        const [resCultivos, resValores, resExperimentos, resTratamientos, resAccesos] = await Promise.all([
           axios.get("https://agro-utc.onrender.com/api/cultivos/", headers).catch(() => ({ data: [] })),
           axios.get("https://agro-utc.onrender.com/api/valores/", headers).catch(() => ({ data: [] })),
           axios.get("https://agro-utc.onrender.com/api/experimentos/", headers).catch(() => ({ data: [] })),
-          axios.get("https://agro-utc.onrender.com/api/tratamientos/", headers).catch(() => ({ data: [] }))
+          axios.get("https://agro-utc.onrender.com/api/tratamientos/", headers).catch(() => ({ data: [] })),
+          axios.get("https://agro-utc.onrender.com/api/accesos/", headers).catch(() => ({ data: [] }))
         ]);
 
+        // Actualizamos los contadores
         setStats({
           cultivos: resCultivos.data.length || 0,
           mediciones: resValores.data.length || 0,
           experimentos: resExperimentos.data.length || 0,
           tratamientos: resTratamientos.data.length || 0
         });
+
+        // Guardamos los últimos accesos (limitamos a los 5 más recientes)
+        const listaAccesos = resAccesos.data || []; 
+        setActividades(listaAccesos.slice(0, 5));
+
       } catch (error) {
-        console.error("Hubo un error al cargar estadísticas:", error);
+        console.error("Hubo un error al cargar los datos del dashboard:", error);
       }
     };
 
-    cargarEstadisticas();
+    cargarDatos();
   }, []);
 
   return (
@@ -103,7 +109,6 @@ function Dashboard() {
           </div>
         </div>
 
-        {/* --- NUEVA SECCIÓN DE ACTIVIDAD Y ESTADO DEL SISTEMA --- */}
         <div className="dashboard-bottom">
           
           <div className="activity-section">
@@ -117,13 +122,26 @@ function Dashboard() {
                 </tr>
               </thead>
               <tbody>
-                {actividadesEstaticas.map((item) => (
-                  <tr key={item.id}>
-                    <td>{item.accion}</td>
-                    <td style={{ fontWeight: "bold" }}>{item.usuario}</td>
-                    <td style={{ color: "#777" }}>{item.fecha}</td>
+                {/* Mostramos los datos reales iterando sobre el estado 'actividades' */}
+                {actividades.length > 0 ? (
+                  actividades.map((item, index) => (
+                    <tr key={index}>
+                      <td>Inicio de sesión en el sistema</td>
+                      <td style={{ fontWeight: "bold" }}>{item.usuario?.username || item.usuario || "Usuario"}</td>
+                      <td style={{ color: "#777" }}>
+                        {new Date(item.fecha_ingreso).toLocaleString("es-ES", {
+                          day: 'numeric', month: 'short', hour: '2-digit', minute:'2-digit'
+                        })}
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="3" style={{ textAlign: "center", padding: "20px", color: "#888" }}>
+                      Cargando actividad reciente o sin datos...
+                    </td>
                   </tr>
-                ))}
+                )}
               </tbody>
             </table>
           </div>
@@ -138,6 +156,10 @@ function Dashboard() {
               <li className="status-item">
                 <span><strong>Modelo KNN</strong></span>
                 <span>Activo 🟢</span>
+              </li>
+              <li className="status-item warning">
+                <span><strong>Sensores Cámara 1</strong></span>
+                <span>Revisión 🟠</span>
               </li>
               <li className="status-item">
                 <span><strong>Último respaldo</strong></span>

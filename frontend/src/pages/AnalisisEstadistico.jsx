@@ -63,7 +63,7 @@ const AnalisisEstadistico = ({
 }) => {
   
   const [grafico1, setGrafico1] = useState('barras');
-  const [grafico2, setGrafico2] = useState('boxplot');
+  const [grafico2, setGrafico2] = useState('lineas');
 
   const resultados = useMemo(() => {
     if (!valores || valores.length === 0) return null;
