@@ -47,9 +47,9 @@ AUTH_USER_MODEL = 'core.Usuario'
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
-    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -130,7 +130,7 @@ CORS_ALLOWED_ORIGINS = [
 
     "http://localhost:5174", 
     "http://127.0.0.1:5174", 
-    "https://agro-utc.vercel.app/",
+    "https://agro-utc.vercel.app",
 ]
 
 # Muy importante: añade esto para permitir el envío de tokens
