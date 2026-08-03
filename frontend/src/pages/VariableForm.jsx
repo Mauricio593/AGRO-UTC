@@ -14,7 +14,7 @@ function VariableForm({
   const [tratamiento, setTratamiento] = useState("");
   const [errorTratamiento, setErrorTratamiento] = useState("");
   
-  // NUEVO: Estado para manejar los mensajes de éxito y error en la interfaz
+  // Estado para manejar los mensajes de éxito y error en la interfaz
   const [mensajeSistema, setMensajeSistema] = useState({ texto: "", tipo: "" });
   
   const [plantas, setPlantas] = useState([
@@ -36,12 +36,12 @@ function VariableForm({
   const [textoExcelDirecto, setTextoExcelDirecto] = useState("");
   const [cargandoDirecto, setCargandoDirecto] = useState(false);
 
-  // NUEVO: Función para mostrar mensajes y ocultarlos automáticamente
+  // Función para mostrar mensajes y ocultarlos automáticamente
   const mostrarMensaje = (texto, tipo = "error") => {
     setMensajeSistema({ texto, tipo });
     setTimeout(() => {
       setMensajeSistema({ texto: "", tipo: "" });
-    }, 5000); // El mensaje desaparece a los 5 segundos
+    }, 5000);
   };
 
   const cargarDatos = async () => {
@@ -65,7 +65,7 @@ function VariableForm({
 
   const handleTratamientoChange = (e) => {
     const valor = e.target.value;
-    setErrorTratamiento(""); // Limpia el error mientras escribe
+    setErrorTratamiento("");
     setTratamiento(valor);
   };
 
@@ -299,7 +299,15 @@ function VariableForm({
     }
   };
 
+  // RESTRICCIÓN DE ELIMINACIÓN POR ROL DE USUARIO
   const eliminarDato = async (id) => {
+    const rolUsuario = (localStorage.getItem("rol") || localStorage.getItem("role") || "").toLowerCase();
+
+    if (rolUsuario !== "docente") {
+      mostrarMensaje("⛔ Acceso Denegado: Solo el Docente tiene permisos para eliminar registros.", "error");
+      return;
+    }
+
     if (!window.confirm("¿Estás seguro de eliminar este registro?")) return;
     try {
       await axios.delete(`https://agro-utc.onrender.com/api/valores/${id}/`, getAuthHeaders());
@@ -330,7 +338,6 @@ function VariableForm({
     <div style={{ backgroundColor: "#fff", padding: "20px", borderRadius: "8px", boxShadow: "0 2px 8px rgba(0,0,0,0.1)" }}>
       <h3 style={{ color: "#0277bd", marginTop: 0, borderBottom: "2px solid #eee", paddingBottom: "10px" }}>📊 Registro de Mediciones - Promedios In Vitro</h3>
 
-      {/* NUEVO: Contenedor global de mensajes del sistema */}
       {mensajeSistema.texto && (
         <div style={{
           padding: "12px",
@@ -346,7 +353,7 @@ function VariableForm({
         </div>
       )}
 
-      {/* --- FORMULARIO MANUAL --- */}
+      {/* FORMULARIO MANUAL */}
       <div style={{ backgroundColor: "#f8f9fa", padding: "15px", borderRadius: "8px", border: "1px solid #e0e0e0", marginBottom: "20px", overflowX: "auto" }}>
         
         <div style={{ marginBottom: "15px", width: "300px" }}>
@@ -354,7 +361,7 @@ function VariableForm({
           <input 
             type="text" 
             value={tratamiento} 
-            maxLength={12} // NUEVO: Límite estricto nativo
+            maxLength={12}
             onChange={handleTratamientoChange} 
             list="trat-list" 
             style={{ 
@@ -367,7 +374,6 @@ function VariableForm({
           />
           <datalist id="trat-list">{listaTratamientos.map(t => <option key={t.id} value={t.nombre} />)}</datalist>
           
-          {/* Mensaje de error local del tratamiento */}
           {errorTratamiento && (
             <span style={{ color: "#d32f2f", fontSize: "12px", marginTop: "4px", display: "block", fontWeight: "500" }}>
               {errorTratamiento}
@@ -410,7 +416,7 @@ function VariableForm({
         </div>
       </div>
 
-      {/* --- SECCIÓN PEGAR DESDE EXCEL (Matriz) --- */}
+      {/* SECCIÓN PEGAR DESDE EXCEL */}
       {mostrarPegar && (
         <div style={{ marginBottom: "20px", padding: "15px", backgroundColor: "#f9f9f9", borderRadius: "6px", border: "1px dashed #0288d1" }}>
           <label style={{ display: "block", color: "#0288d1", fontWeight: "bold", fontSize: "14px", marginBottom: "5px" }}>
@@ -438,7 +444,7 @@ function VariableForm({
         </div>
       )}
 
-      {/* --- BOTONERA PRINCIPAL --- */}
+      {/* BOTONERA PRINCIPAL */}
       <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end", flexWrap: "wrap", marginBottom: "30px" }}>
         <button onClick={() => setMostrarPegar(!mostrarPegar)} style={{ padding: "8px 16px", backgroundColor: "#e0f2f1", color: "#004d40", border: "1px solid #004d40", borderRadius: "4px", cursor: "pointer", fontWeight: "bold" }}>
           📋 Importar Matriz Excel
@@ -450,7 +456,7 @@ function VariableForm({
         <button onClick={() => setMostrarAnalisis(!mostrarAnalisis)} style={{ padding: "8px 16px", backgroundColor: "#0288d1", color: "#fff", border: "none", borderRadius: "4px", cursor: "pointer", fontWeight: "bold" }}>📊 Ver Análisis</button>
       </div>
 
-      {/* --- ENCABEZADO FLEXIBLE PARA LA TABLA DE REGISTROS --- */}
+      {/* ENCABEZADO Y REGISTROS DIRECTOS */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid #eee", paddingBottom: "10px", marginBottom: "15px" }}>
         <h4 style={{ color: "#424242", margin: 0 }}>Registros en Base de Datos</h4>
         <button onClick={() => setMostrarPegarDirecto(!mostrarPegarDirecto)} style={{ padding: "6px 12px", backgroundColor: "#00897b", color: "#fff", border: "none", borderRadius: "4px", cursor: "pointer", fontSize: "13px", fontWeight: "bold" }}>
@@ -458,7 +464,6 @@ function VariableForm({
         </button>
       </div>
 
-      {/* --- SECCIÓN: PEGAR REGISTROS DIRECTOS --- */}
       {mostrarPegarDirecto && (
         <div style={{ marginBottom: "15px", padding: "15px", backgroundColor: "#e0f2f1", borderRadius: "6px", border: "1px dashed #00897b" }}>
           <label style={{ display: "block", color: "#00695c", fontWeight: "bold", fontSize: "14px", marginBottom: "5px" }}>

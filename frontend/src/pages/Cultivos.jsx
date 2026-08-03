@@ -10,7 +10,6 @@ function Cultivos() {
   const [mostrarForm, setMostrarForm] = useState(false);
   const [menuContext, setMenuContext] = useState({ visible: false, x: 0, y: 0, tipo: "", id: "" });
 
-  // NUEVO: Estado para controlar nuestra ventana modal personalizada
   const [modal, setModal] = useState({
     visible: false,
     accion: "", // 'agregar', 'editar', 'eliminar', 'alerta'
@@ -48,7 +47,6 @@ function Cultivos() {
     setMostrarForm(false);
   }, [sel.lote]);
 
-
   const refrescarLista = (tipo) => {
     if (tipo === 'cultivo') cargarCultivos();
     if (tipo === 'lote') cargarLotes(sel.cultivo);
@@ -56,32 +54,27 @@ function Cultivos() {
     if (tipo === 'variable') cargarVariables();
   };
 
-  // --- LÓGICA DE VALIDACIÓN EN TIEMPO REAL ---
   const manejarCambioInput = (e) => {
     const valor = e.target.value;
     let error = "";
 
     if (modal.tipo === 'experimento') {
-      // Validaciones para AÑO (Máximo 4 números)
       if (valor.length > 4) {
         error = "❌ El año permite máximo 4 dígitos.";
       } else if (valor !== "" && !/^\d+$/.test(valor)) {
         error = "❌ Solo se permiten números para el año.";
       }
     } else {
-      // Validaciones para NOMBRES (Máximo 12 caracteres, solo letras)
-      if (valor.length > 12) {
-        error = "❌ Límite excedido: Máximo 12 caracteres.";
+      if (valor.length > 20) {
+        error = "❌ Límite excedido: Máximo 20 caracteres.";
       } else if (valor !== "" && !/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/.test(valor)) {
         error = "❌ Solo se permiten letras y espacios.";
       }
     }
 
-    // Actualizamos el estado con el valor y el posible error
     setModal({ ...modal, valor, error });
   };
 
-  // --- ABRIR MODALES (Reemplaza a window.prompt / confirm) ---
   const abrirModalAgregar = (tipo) => {
     setModal({ visible: true, accion: 'agregar', tipo, id: null, valor: "", error: "", mensaje: `Agregar nuevo ${tipo}` });
   };
@@ -92,9 +85,18 @@ function Cultivos() {
     setModal({ visible: true, accion: 'editar', tipo, id, valor: "", error: "", mensaje: `Editar ${tipo}` });
   };
 
+  // RESTRICCIÓN DE ELIMINACIÓN POR ROL DE USUARIO
   const abrirModalEliminar = () => {
     const { tipo, id } = menuContext;
     cerrarMenu();
+
+    const rolUsuario = (localStorage.getItem("rol") || localStorage.getItem("role") || "").toLowerCase();
+
+    if (rolUsuario !== "docente") {
+      mostrarAlerta("⛔ Acceso Denegado: Solo el Docente tiene permisos para eliminar elementos.");
+      return;
+    }
+
     setModal({ 
       visible: true, 
       accion: 'eliminar', 
@@ -110,21 +112,18 @@ function Cultivos() {
     setModal({ visible: true, accion: 'alerta', tipo: "", id: null, valor: "", error: "", mensaje });
   };
 
-  // --- EJECUCIÓN DE API DESDE EL MODAL ---
   const confirmarAccionModal = async () => {
     const { accion, tipo, id, valor } = modal;
     const valorPuro = valor.trim();
 
-    // Validar antes de enviar si es agregar/editar
     if ((accion === 'agregar' || accion === 'editar') && (valorPuro === "" || modal.error !== "")) {
-      return; // No hace nada si está vacío o hay errores
+      return;
     }
 
     let endpoint = ""; 
     let payload = {};
     let metodo = "";
 
-    // Configurar payload y endpoint
     if (accion === 'eliminar') {
       metodo = 'DELETE';
       if (tipo === 'cultivo') endpoint = `cultivos/${id}/`;
@@ -152,7 +151,7 @@ function Cultivos() {
         setSel(p => ({ ...p, [tipo]: "" }));
       }
       
-      setModal({ ...modal, visible: false }); // Cerramos modal con éxito
+      setModal({ ...modal, visible: false });
       mostrarAlerta(`✅ Operación realizada con éxito.`);
       refrescarLista(tipo);
 
@@ -269,13 +268,11 @@ function Cultivos() {
         </div>
       )}
 
-      {/* --- ESTRUCTURA DE LA VENTANA MODAL PERSONALIZADA --- */}
       {modal.visible && (
         <div className="modal-overlay">
           <div className="modal-box">
             <h3>{modal.mensaje}</h3>
             
-            {/* Si es agregar o editar, mostramos el Input */}
             {(modal.accion === 'agregar' || modal.accion === 'editar') && (
               <>
                 <input 
@@ -284,7 +281,6 @@ function Cultivos() {
                   value={modal.valor}
                   onChange={manejarCambioInput}
                 />
-                {/* Aquí renderizamos las letras rojas de advertencia si hay un error */}
                 <span className="texto-error">{modal.error}</span>
               </>
             )}
