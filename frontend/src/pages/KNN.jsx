@@ -201,9 +201,9 @@ function KNN() {
       <div className="main-container">
         
         <div className="header-container">
-          <h3>🔍 Búsqueda y Auditoría de Anomalías</h3>
+          <h3>🔍 ANOMALIAS </h3>
           <p style={{ color: "#64748b", marginTop: "5px", marginBottom: 0 }}>
-            Análisis matemático multidimensional mediante vecindad más cercana (KNN) para la detección de incongruencias en datos agrónomos e histológicos.
+            Análisis matemático multidimensional mediante vecios más cercanos (KNN) para la detección de incongruencias.
           </p>
         </div>
 
@@ -236,7 +236,7 @@ function KNN() {
             </div>
 
             <div className="filter-item">
-              <label className="form-label">3. Campaña/Año:</label>
+              <label className="form-label">3. Año:</label>
               <select 
                 className="form-input" 
                 value={filtros.anio} 
@@ -309,7 +309,7 @@ function KNN() {
                     <th>Planta (Repetición)</th>
                     <th>Tratamiento</th>
                     <th>Valor Registrado ({reporte.variable})</th>
-                    <th>Estado de Auditoría</th>
+                    <th>Estado</th>
                   </tr>
                 </thead>
                 <tbody>

@@ -1,8 +1,6 @@
 import { useState, useEffect } from "react";
-import API from "../services/api"; // Importación centralizada
+import API from "../services/api"; 
 import { useNavigate } from "react-router-dom";
-
-// Importamos la imagen desde la carpeta api
 import invitroImg from "../api/invitro.jpg"; 
 import "./Login.css";
 
@@ -14,6 +12,9 @@ function Login() {
   const [rol, setRol] = useState("estudiante"); 
   const [rememberMe, setRememberMe] = useState(false);
   
+  // NUEVO: Estado para manejar mensajes de error visuales
+  const [errorMensaje, setErrorMensaje] = useState("");
+  
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -23,20 +24,20 @@ function Login() {
     }
   }, [navigate]);
 
-  // --- FUNCIÓN PARA INICIAR SESIÓN ACTUALIZADA ---
   const handleLogin = async (e) => {
     e.preventDefault();
+    setErrorMensaje(""); // Limpiar errores previos
+
+    if (!username.trim() || !password.trim()) {
+      return setErrorMensaje("Por favor, ingresa tu usuario y contraseña.");
+    }
+
     try {
-      // Uso de API centralizada
-      const res = await API.post("token/", { 
-        username, 
-        password 
-      });
+      const res = await API.post("token/", { username, password });
       
       localStorage.setItem("token", res.data.access);
       localStorage.setItem("username", username); 
       
-      // Buscamos el rol del usuario y lo guardamos
       try {
         const usersRes = await API.get("usuarios/");
         const currentUser = usersRes.data.find(u => u.username === username);
@@ -49,14 +50,35 @@ function Login() {
       
       navigate("/dashboard");
     } catch (error) {
-      alert("❌ Error al iniciar sesión: Revisa tus credenciales.");
+      setErrorMensaje("Credenciales incorrectas. Verifica tu usuario y contraseña.");
     }
   };
 
   const handleRegister = async (e) => {
     e.preventDefault();
+    setErrorMensaje(""); // Limpiar errores previos
+
+    // 1. Validaciones de campos obligatorios
+    if (!username.trim()) return setErrorMensaje("El nombre de usuario es obligatorio.");
+    if (!email.trim() || !email.includes("@")) return setErrorMensaje("Ingresa un correo electrónico válido.");
+    if (!password.trim() || password.length < 6) return setErrorMensaje("La contraseña debe tener al menos 6 caracteres.");
+
     try {
-      // Uso de API centralizada
+      // 2. Lógica para verificar si ya existe un Docente
+      if (rol === "docente") {
+        try {
+          const resUsuarios = await API.get("usuarios/");
+          const existeDocente = resUsuarios.data.some(u => u.rol === "docente");
+          
+          if (existeDocente) {
+            return setErrorMensaje("Acceso denegado: Ya existe un docente registrado en el sistema. Solo puede haber uno.");
+          }
+        } catch (err) {
+          console.warn("No se pudo verificar la lista de usuarios. El backend podría rechazar la consulta pública.");
+        }
+      }
+
+      // 3. Si pasa las validaciones, registrar al usuario
       await API.post("registro/", { 
         username, 
         email,
@@ -66,9 +88,10 @@ function Login() {
       
       alert("✅ ¡Registro exitoso! Ahora puedes iniciar sesión.");
       setPassword("");
+      setErrorMensaje("");
       setIsRegistering(false); 
     } catch (error) {
-      alert("❌ Error al registrar: Revisa los datos o puede que el usuario ya exista.");
+      setErrorMensaje("Error al registrar: Es posible que el nombre de usuario o correo ya estén en uso.");
       console.error(error);
     }
   };
@@ -78,6 +101,7 @@ function Login() {
     setUsername("");
     setPassword("");
     setEmail("");
+    setErrorMensaje(""); // Limpiar errores al cambiar de formulario
   };
 
   return (
@@ -91,7 +115,15 @@ function Login() {
         <div className="login-form-section">
           <h2>{isRegistering ? "Crear una Cuenta" : "Iniciar Sesión"}</h2>
           
-          <form onSubmit={isRegistering ? handleRegister : handleLogin} className="form-content">
+          {/* MOSTRAR MENSAJE DE ERROR */}
+          {errorMensaje && (
+            <div style={{ backgroundColor: "#ffebee", color: "#c62828", padding: "10px", borderRadius: "5px", marginBottom: "15px", fontSize: "14px", border: "1px solid #ef9a9a", textAlign: "center" }}>
+              ⚠️ {errorMensaje}
+            </div>
+          )}
+
+          {/* Removemos los "required" de HTML para que reaccione nuestra validación personalizada */}
+          <form onSubmit={isRegistering ? handleRegister : handleLogin} className="form-content" noValidate>
             
             <div className="input-group">
               <input 
@@ -99,7 +131,6 @@ function Login() {
                 placeholder="Usuario" 
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                required 
               />
             </div>
 
@@ -111,14 +142,12 @@ function Login() {
                     placeholder="Correo Electrónico" 
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    required 
                   />
                 </div>
                 <div className="input-group">
                   <select 
                     value={rol} 
                     onChange={(e) => setRol(e.target.value)}
-                    required
                     style={{ width: "100%", padding: "10px", borderRadius: "5px", border: "1px solid #ccc" }}
                   >
                     <option value="estudiante">Estudiante</option>
@@ -131,10 +160,9 @@ function Login() {
             <div className="input-group">
               <input 
                 type="password" 
-                placeholder="Contraseña (••••••••)" 
+                placeholder="Contraseña (Mínimo 6 caracteres)" 
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                required 
               />
             </div>
 

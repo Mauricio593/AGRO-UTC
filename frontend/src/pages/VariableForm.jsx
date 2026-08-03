@@ -12,6 +12,8 @@ function VariableForm({
   anio = "Año no especificado"
 }) { 
   const [tratamiento, setTratamiento] = useState("");
+  // NUEVO: Estado para manejar el error del tratamiento
+  const [errorTratamiento, setErrorTratamiento] = useState("");
   
   const [plantas, setPlantas] = useState([
     { id: 1, valores: Array(10).fill("") },
@@ -53,6 +55,17 @@ function VariableForm({
     if(expId && varId) cargarDatos();
   }, [varId, expId]);
 
+  // NUEVO: Función para validar el input en tiempo real
+  const handleTratamientoChange = (e) => {
+    const valor = e.target.value;
+    if (valor.length > 12) {
+      setErrorTratamiento("⚠️ El límite es de 12 caracteres.");
+    } else {
+      setErrorTratamiento(""); // Limpia el error si todo está bien
+      setTratamiento(valor);
+    }
+  };
+
   const handleValorChange = (plantaIndex, repIndex, val) => {
     if ((val === "" || Number(val) >= 0) && val.length <= 6) {
       const nuevasPlantas = [...plantas];
@@ -85,10 +98,14 @@ function VariableForm({
   const promediosActuales = calcularPromediosPorRepeticion();
 
   const guardarDatosPromediados = async () => {
-    if (!tratamiento) return alert("Por favor, ingresa el nombre del tratamiento.");
+    // NUEVO: Validación visual sin usar el navegador
+    if (!tratamiento.trim()) {
+      setErrorTratamiento("⚠️ Por favor, ingresa el nombre del tratamiento.");
+      return; 
+    }
     
     const hayDatos = promediosActuales.some(p => p !== "");
-    if (!hayDatos) return alert("No hay datos para promediar. Ingresa valores.");
+    if (!hayDatos) return alert("No hay datos para promediar. Ingresa valores."); // Puedes reemplazar este también si lo deseas
 
     setCargando(true);
     try {
@@ -128,7 +145,6 @@ function VariableForm({
     }
   };
 
-  // FUNCIÓN EXISTENTE: PROCESAR EXCEL MATRICIAL
   const procesarExcelMatricial = async () => {
     if (!textoExcel.trim()) return alert("Por favor, pega datos primero.");
     setCargandoBulk(true);
@@ -219,7 +235,6 @@ function VariableForm({
     }
   };
 
-  // NUEVA FUNCIÓN: PROCESAR REGISTROS DIRECTOS (Tratamiento | Repetición | Valor)
   const procesarExcelDirecto = async () => {
     if (!textoExcelDirecto.trim()) return alert("Por favor, pega datos primero.");
     setCargandoDirecto(true);
@@ -234,17 +249,13 @@ function VariableForm({
         if (!linea.trim()) continue;
         const columnas = linea.split("\t");
         
-        // Verificamos que al menos existan 3 columnas
         if (columnas.length < 3) continue;
 
         const tratNombre = columnas[0].trim();
-        // Limpiamos la repetición en caso de que copien "R1" en lugar de "1"
         const repeticionStr = columnas[1].trim().replace(/\D/g, ''); 
         const repeticion = parseInt(repeticionStr);
-        // Formateamos el valor numérico
         const valor = parseFloat(columnas[2].trim().replace(",", "."));
 
-        // Si falta algún dato importante o la fila era encabezado, la saltamos
         if (!tratNombre || isNaN(repeticion) || isNaN(valor) || tratNombre.toLowerCase() === 'tratamiento') continue;
 
         let tratamientoId = null;
@@ -294,7 +305,8 @@ function VariableForm({
   };
 
   const limpiarCampos = () => {
-    setTratamiento(""); 
+    setTratamiento("");
+    setErrorTratamiento(""); // También limpiamos el error
     setPlantas([
       { id: 1, valores: Array(10).fill("") },
       { id: 2, valores: Array(10).fill("") },
@@ -316,8 +328,27 @@ function VariableForm({
         
         <div style={{ marginBottom: "15px", width: "300px" }}>
           <label style={{ display: "block", color: "#0277bd", fontWeight: "bold", fontSize: "14px", marginBottom: "5px" }}>Tratamiento (Ej. T1):</label>
-          <input type="text" value={tratamiento} onChange={(e) => setTratamiento(e.target.value)} list="trat-list" style={{ width: "100%", padding: "8px", borderRadius: "4px", border: "1px solid #ccc" }} />
+          <input 
+            type="text" 
+            value={tratamiento} 
+            onChange={handleTratamientoChange} // Usamos la nueva función
+            list="trat-list" 
+            style={{ 
+              width: "100%", 
+              padding: "8px", 
+              borderRadius: "4px", 
+              border: errorTratamiento ? "2px solid #d32f2f" : "1px solid #ccc", // Borde rojo si hay error
+              outline: "none"
+            }} 
+          />
           <datalist id="trat-list">{listaTratamientos.map(t => <option key={t.id} value={t.nombre} />)}</datalist>
+          
+          {/* NUEVO: Mensaje de error renderizado en la interfaz */}
+          {errorTratamiento && (
+            <span style={{ color: "#d32f2f", fontSize: "12px", marginTop: "4px", display: "block", fontWeight: "500" }}>
+              {errorTratamiento}
+            </span>
+          )}
         </div>
 
         <table style={{ width: "100%", borderCollapse: "collapse", minWidth: "600px" }}>

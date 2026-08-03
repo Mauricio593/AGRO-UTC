@@ -6,6 +6,10 @@ import API from "../services/api";
 const GestionUsuarios = ({ usuarioActual }) => {
   const [usuarios, setUsuarios] = useState([]);
   const [cargando, setCargando] = useState(true);
+  
+  // Estados para manejar la edición
+  const [usuarioEditando, setUsuarioEditando] = useState(null);
+  const [datosEdicion, setDatosEdicion] = useState({ username: "", email: "", rol: "" });
 
   useEffect(() => {
     obtenerUsuarios();
@@ -23,24 +27,6 @@ const GestionUsuarios = ({ usuarioActual }) => {
     }
   };
 
-  const agregarUsuario = async () => {
-    const nuevoUsuarioData = {
-      username: "nuevo_usuario", 
-      email: "nuevo@utc.edu.ec", 
-      rol: "estudiante",
-      password: "password123" 
-    };
-
-    try {
-      await API.post("registro/", nuevoUsuarioData); 
-      alert("Usuario creado exitosamente");
-      obtenerUsuarios(); 
-    } catch (error) {
-      console.error("Error al crear usuario:", error);
-      alert("Hubo un error al crear el usuario. Revisa la consola.");
-    }
-  };
-
   const eliminarUsuario = async (id) => {
     const confirmar = window.confirm("¿Estás seguro de eliminar este usuario?");
     if (!confirmar) return;
@@ -55,8 +41,29 @@ const GestionUsuarios = ({ usuarioActual }) => {
     }
   };
 
-  const editarUsuario = (id) => {
-    alert(`Lógica para editar el usuario con ID: ${id} (Próximamente)`);
+  // Función para abrir el modal con los datos cargados
+  const abrirEdicion = (usuario) => {
+    setUsuarioEditando(usuario.id);
+    setDatosEdicion({
+      username: usuario.username || usuario.nombre || "",
+      email: usuario.email || usuario.correo || "",
+      rol: usuario.rol || "estudiante"
+    });
+  };
+
+  // Función para guardar los cambios
+  const guardarEdicion = async (e) => {
+    e.preventDefault();
+    try {
+      // Petición PUT o PATCH a tu backend para actualizar
+      await API.put(`usuarios/${usuarioEditando}/`, datosEdicion);
+      alert("✅ Usuario actualizado correctamente.");
+      setUsuarioEditando(null); // Cerrar modal
+      obtenerUsuarios(); // Refrescar tabla
+    } catch (error) {
+      console.error("Error al editar:", error);
+      alert("❌ Ocurrió un error al actualizar el usuario. Verifica la consola.");
+    }
   };
 
   if (cargando) return <p style={{ padding: "20px" }}>Cargando usuarios desde el servidor...</p>;
@@ -65,17 +72,8 @@ const GestionUsuarios = ({ usuarioActual }) => {
     <>
       <Navbar /> 
 
-      <div style={{ padding: "20px", fontFamily: "Arial, sans-serif" }}>
+      <div style={{ padding: "20px", fontFamily: "Arial, sans-serif", position: "relative" }}>
         <h2>Gestión de Usuarios</h2>
-        
-        <PermisoRol rolUsuarioActual={usuarioActual.rol} rolRequerido="docente">
-          <button 
-            onClick={agregarUsuario}
-            style={{ backgroundColor: "#45B7D1", color: "white", padding: "10px", border: "none", borderRadius: "5px", marginBottom: "15px", cursor: "pointer" }}
-          >
-            + Agregar Nuevo Usuario
-          </button>
-        </PermisoRol>
 
         <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
           <thead>
@@ -105,9 +103,9 @@ const GestionUsuarios = ({ usuarioActual }) => {
                     </span>
                   </td>
                   <td style={{ padding: "10px", display: "flex", gap: "10px" }}>
-                    <button onClick={() => editarUsuario(usuario.id)} style={{ cursor: "pointer", padding: "5px" }}>✏️ Editar</button>
-                    <PermisoRol rolUsuarioActual={usuarioActual.rol} rolRequerido="docente">
-                       <button onClick={() => eliminarUsuario(usuario.id)} style={{ color: "red", cursor: "pointer", padding: "5px" }}>🗑️ Borrar</button>
+                    <PermisoRol rolUsuarioActual={usuarioActual?.rol} rolRequerido="docente">
+                       <button onClick={() => abrirEdicion(usuario)} style={{ backgroundColor: "#4CAF50", color: "white", border: "none", borderRadius: "4px", cursor: "pointer", padding: "5px 10px" }}>✏️ Editar</button>
+                       <button onClick={() => eliminarUsuario(usuario.id)} style={{ backgroundColor: "#f44336", color: "white", border: "none", borderRadius: "4px", cursor: "pointer", padding: "5px 10px" }}>🗑️ Borrar</button>
                     </PermisoRol>
                   </td>
                 </tr>
@@ -119,6 +117,36 @@ const GestionUsuarios = ({ usuarioActual }) => {
             )}
           </tbody>
         </table>
+
+        {/* MODAL DE EDICIÓN */}
+        {usuarioEditando && (
+          <div style={{ position: "fixed", top: 0, left: 0, width: "100vw", height: "100vh", backgroundColor: "rgba(0,0,0,0.5)", display: "flex", justifyContent: "center", alignItems: "center", zIndex: 1000 }}>
+            <div style={{ backgroundColor: "white", padding: "20px", borderRadius: "8px", width: "400px", boxShadow: "0 4px 6px rgba(0,0,0,0.1)" }}>
+              <h3>Editar Usuario</h3>
+              <form onSubmit={guardarEdicion}>
+                <div style={{ marginBottom: "10px" }}>
+                  <label style={{ display: "block", marginBottom: "5px", fontWeight: "bold" }}>Nombre de Usuario:</label>
+                  <input type="text" value={datosEdicion.username} onChange={(e) => setDatosEdicion({...datosEdicion, username: e.target.value})} style={{ width: "100%", padding: "8px", borderRadius: "4px", border: "1px solid #ccc", boxSizing: "border-box" }} required />
+                </div>
+                <div style={{ marginBottom: "10px" }}>
+                  <label style={{ display: "block", marginBottom: "5px", fontWeight: "bold" }}>Correo:</label>
+                  <input type="email" value={datosEdicion.email} onChange={(e) => setDatosEdicion({...datosEdicion, email: e.target.value})} style={{ width: "100%", padding: "8px", borderRadius: "4px", border: "1px solid #ccc", boxSizing: "border-box" }} required />
+                </div>
+                <div style={{ marginBottom: "20px" }}>
+                  <label style={{ display: "block", marginBottom: "5px", fontWeight: "bold" }}>Rol:</label>
+                  <select value={datosEdicion.rol} onChange={(e) => setDatosEdicion({...datosEdicion, rol: e.target.value})} style={{ width: "100%", padding: "8px", borderRadius: "4px", border: "1px solid #ccc", boxSizing: "border-box" }}>
+                    <option value="estudiante">Estudiante</option>
+                    <option value="docente">Docente</option>
+                  </select>
+                </div>
+                <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
+                  <button type="button" onClick={() => setUsuarioEditando(null)} style={{ padding: "8px 12px", border: "none", borderRadius: "4px", cursor: "pointer", backgroundColor: "#ccc" }}>Cancelar</button>
+                  <button type="submit" style={{ padding: "8px 12px", border: "none", borderRadius: "4px", cursor: "pointer", backgroundColor: "#45B7D1", color: "white" }}>Guardar Cambios</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
       </div>
     </>
   );
