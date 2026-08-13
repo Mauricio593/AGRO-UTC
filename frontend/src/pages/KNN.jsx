@@ -203,7 +203,7 @@ function KNN() {
         <div className="header-container">
           <h3>🔍 ANOMALIAS </h3>
           <p style={{ color: "#64748b", marginTop: "5px", marginBottom: 0 }}>
-            Análisis matemático multidimensional mediante vecios más cercanos (KNN) para la detección de incongruencias.
+            Análisis matemático multidimensional mediante vecinos más cercanos (KNN) para la detección de incongruencias.
           </p>
         </div>
 
@@ -285,6 +285,53 @@ function KNN() {
                 Aislados Atípicos (Anomalías): <strong style={{color: "#d32f2f"}}>{reporte.total_anomalias}</strong>
               </p>
             </div>
+
+            {/* SECCIÓN NUEVA: Tarjetas de Métricas y Matriz de Confusión */}
+            {reporte.metricas && (
+              <div className="form-card" style={{ marginTop: "20px", marginBottom: "20px" }}>
+                <h4 style={{ borderBottom: "2px solid #e2e8f0", paddingBottom: "10px", marginTop: 0 }}>📊 Evaluación del Modelo (Validación Cruzada k-fold)</h4>
+                
+                <div style={{ display: "flex", gap: "15px", flexWrap: "wrap", marginTop: "15px" }}>
+                  <div style={{ flex: 1, minWidth: "120px", padding: "15px", backgroundColor: "#f8fafc", borderRadius: "8px", textAlign: "center", border: "1px solid #e2e8f0" }}>
+                    <span style={{ display: "block", fontSize: "0.9em", color: "#64748b" }}>Exactitud (Accuracy)</span>
+                    <strong style={{ fontSize: "1.5em", color: "#0f172a" }}>{reporte.metricas.accuracy}%</strong>
+                  </div>
+                  <div style={{ flex: 1, minWidth: "120px", padding: "15px", backgroundColor: "#f8fafc", borderRadius: "8px", textAlign: "center", border: "1px solid #e2e8f0" }}>
+                    <span style={{ display: "block", fontSize: "0.9em", color: "#64748b" }}>Precisión</span>
+                    <strong style={{ fontSize: "1.5em", color: "#0f172a" }}>{reporte.metricas.precision}%</strong>
+                  </div>
+                  <div style={{ flex: 1, minWidth: "120px", padding: "15px", backgroundColor: "#f8fafc", borderRadius: "8px", textAlign: "center", border: "1px solid #e2e8f0" }}>
+                    <span style={{ display: "block", fontSize: "0.9em", color: "#64748b" }}>Sensibilidad (Recall)</span>
+                    <strong style={{ fontSize: "1.5em", color: "#0f172a" }}>{reporte.metricas.recall}%</strong>
+                  </div>
+                  <div style={{ flex: 1, minWidth: "120px", padding: "15px", backgroundColor: "#f8fafc", borderRadius: "8px", textAlign: "center", border: "1px solid #e2e8f0" }}>
+                    <span style={{ display: "block", fontSize: "0.9em", color: "#64748b" }}>F1-Score</span>
+                    <strong style={{ fontSize: "1.5em", color: "#0f172a" }}>{reporte.metricas.f1_score}%</strong>
+                  </div>
+                </div>
+
+                {reporte.metricas.matriz_confusion && (
+                  <div style={{ marginTop: "20px" }}>
+                    <h5 style={{ color: "#475569", marginBottom: "10px" }}>Matriz de Confusión</h5>
+                    <table style={{ width: "100%", maxWidth: "300px", borderCollapse: "collapse", textAlign: "center" }}>
+                      <tbody>
+                        {reporte.metricas.matriz_confusion.map((fila, i) => (
+                          <tr key={i}>
+                            {fila.map((valor, j) => (
+                              <td key={j} style={{ border: "1px solid #cbd5e1", padding: "12px", backgroundColor: i === j ? "#f0fdf4" : "#fef2f2" }}>
+                                <strong style={{ color: i === j ? "#16a34a" : "#dc2626" }}>{valor}</strong>
+                              </td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    <small style={{ color: "#94a3b8", display: "block", marginTop: "5px" }}>* Las celdas en verde indican las predicciones correctas del algoritmo.</small>
+                  </div>
+                )}
+              </div>
+            )}
+            {/* FIN SECCIÓN NUEVA */}
 
             {listaAnomaliasDetalladas.length > 0 && (
               <div className="anomaly-diagnostic-panel">
