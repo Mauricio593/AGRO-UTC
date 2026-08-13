@@ -5,13 +5,15 @@ import Navbar from "../components/Navbar";
 // Importación del CSS separado
 import "./KNN.css"; 
 
-import { Chart as ChartJS, BarElement, CategoryScale, LinearScale, Tooltip, Legend } from "chart.js";
-import { Bar } from "react-chartjs-2";
+// 1. Añadimos PointElement y LineElement para el gráfico de líneas
+import { Chart as ChartJS, BarElement, CategoryScale, LinearScale, Tooltip, Legend, PointElement, LineElement } from "chart.js";
+import { Bar, Line } from "react-chartjs-2";
 
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
-ChartJS.register(BarElement, CategoryScale, LinearScale, Tooltip, Legend);
+// 2. Registramos los nuevos elementos para que ChartJS los reconozca
+ChartJS.register(BarElement, CategoryScale, LinearScale, Tooltip, Legend, PointElement, LineElement);
 
 function KNN() {
   const [filtros, setFiltros] = useState({ cultivoId: "", loteId: "", anio: "", variable: "" });
@@ -20,6 +22,9 @@ function KNN() {
   const [reporte, setReporte] = useState(null);
   const [loading, setLoading] = useState(false);
   const [grafica, setGrafica] = useState(null);
+  
+  // 3. Nuevo estado para controlar el tipo de gráfica
+  const [tipoGrafico, setTipoGrafico] = useState("bar"); 
 
   // A. Cargar Cultivos y Variables al abrir la pantalla
   useEffect(() => {
@@ -82,12 +87,16 @@ function KNN() {
       setReporte(res.data);
 
       setGrafica({
-        labels: res.data.detalles.map(d => `P:${d.planta} R:${d.repeticion}`),
+        // 4. Validación para evitar imprimir 'P:null'. Si es null, solo muestra la repetición.
+        labels: res.data.detalles.map(d => d.planta ? `P:${d.planta} R:${d.repeticion}` : `R:${d.repeticion}`),
         datasets: [{
           label: `Valores de ${res.data.variable}`,
           data: res.data.detalles.map(d => d.valor),
           backgroundColor: res.data.detalles.map(d => d.es_anomalia ? "rgba(211, 47, 47, 0.85)" : "rgba(2, 119, 189, 0.75)"),
-          borderRadius: 4
+          borderColor: res.data.detalles.map(d => d.es_anomalia ? "rgba(211, 47, 47, 1)" : "rgba(2, 119, 189, 1)"),
+          borderWidth: 1,
+          borderRadius: 4,
+          tension: 0.3 // Da un efecto curvo si se usa el gráfico de líneas
         }]
       });
     } catch (error) {
@@ -122,7 +131,8 @@ function KNN() {
       }
 
       return {
-        identificador: `Planta ${anom.planta} (Repetición ${anom.repeticion})`,
+        // 5. Ocultamos 'Planta null' del diagnóstico
+        identificador: anom.planta ? `Planta ${anom.planta} (Repetición ${anom.repeticion})` : `Repetición ${anom.repeticion}`,
         tratamiento: anom.tratamiento,
         valor: anom.valor,
         conclusion: conclusion
@@ -155,7 +165,8 @@ function KNN() {
     doc.text(`Total Registros: ${reporte.total_analizado} | Anomalías: ${reporte.total_anomalias}`, 14, 62);
 
     const tableData = reporte.detalles.map(d => [
-      `${d.planta} (R: ${d.repeticion})`,
+      // 6. Ocultamos el nulo en la tabla del PDF
+      d.planta ? `${d.planta} (R: ${d.repeticion})` : `R: ${d.repeticion}`,
       d.tratamiento,
       d.valor,
       d.es_anomalia ? "ANOMALÍA" : "NORMAL"
@@ -193,6 +204,14 @@ function KNN() {
     }
 
     doc.save(`Reporte_Auditoria_${getNombreCultivo()}_${reporte.variable}.pdf`);
+  };
+
+  // 7. Opciones de estilo compartidas para ambas gráficas (Barras y Líneas)
+  const opcionesGrafica = { 
+    responsive: true, 
+    maintainAspectRatio: false, 
+    plugins: { legend: { display: false } },
+    scales: { y: { title: { display: true, text: `Escala (${reporte?.variable})`, font: { weight: 'bold' } } } }
   };
 
   return (
@@ -286,7 +305,6 @@ function KNN() {
               </p>
             </div>
 
-            {/* SECCIÓN NUEVA: Tarjetas de Métricas y Matriz de Confusión */}
             {reporte.metricas && (
               <div className="form-card" style={{ marginTop: "20px", marginBottom: "20px" }}>
                 <h4 style={{ borderBottom: "2px solid #e2e8f0", paddingBottom: "10px", marginTop: 0 }}>📊 Evaluación del Modelo (Validación Cruzada k-fold)</h4>
@@ -331,7 +349,6 @@ function KNN() {
                 )}
               </div>
             )}
-            {/* FIN SECCIÓN NUEVA */}
 
             {listaAnomaliasDetalladas.length > 0 && (
               <div className="anomaly-diagnostic-panel">
@@ -353,7 +370,7 @@ function KNN() {
               <table className="sql-table">
                 <thead>
                   <tr>
-                    <th>Planta (Repetición)</th>
+                    <th>Identificador</th>
                     <th>Tratamiento</th>
                     <th>Valor Registrado ({reporte.variable})</th>
                     <th>Estado</th>
@@ -362,7 +379,8 @@ function KNN() {
                 <tbody>
                   {reporte.detalles.map((d, i) => (
                     <tr key={i} style={{ backgroundColor: d.es_anomalia ? "#fef2f2" : "transparent" }}>
-                      <td>{d.planta} (R: {d.repeticion})</td>
+                      {/* 8. Validación para ocultar nulos en la tabla de resultados */}
+                      <td>{d.planta ? `${d.planta} (R: ${d.repeticion})` : `Repetición ${d.repeticion}`}</td>
                       <td>{d.tratamiento}</td>
                       <td style={{ fontWeight: "bold" }}>{d.valor}</td>
                       <td style={{ color: d.es_anomalia ? "#dc2626" : "#16a34a", fontWeight: "bold" }}>
@@ -374,16 +392,30 @@ function KNN() {
               </table>
             </div>
 
-            <div className="form-card chart-container">
-              <Bar 
-                data={grafica} 
-                options={{ 
-                  responsive: true, 
-                  maintainAspectRatio: false, 
-                  plugins: { legend: { display: false } },
-                  scales: { y: { title: { display: true, text: `Escala (${reporte.variable})`, font: { weight: 'bold' } } } }
-                }} 
-              />
+            <div className="form-card">
+              {/* 9. Botones o selector para cambiar el tipo de gráfica dinámicamente */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+                <h4 style={{ margin: 0, color: "#475569" }}>Representación Gráfica</h4>
+                <div>
+                  <label style={{ marginRight: '10px', fontSize: '14px', fontWeight: 'bold', color: '#64748b' }}>Visualización:</label>
+                  <select 
+                    value={tipoGrafico} 
+                    onChange={(e) => setTipoGrafico(e.target.value)} 
+                    style={{ padding: '6px', borderRadius: '4px', border: '1px solid #cbd5e1' }}
+                  >
+                    <option value="bar">📊 Gráfico de Barras</option>
+                    <option value="line">📉 Gráfico de Líneas</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="chart-container" style={{ height: "400px" }}>
+                {tipoGrafico === "bar" ? (
+                  <Bar data={grafica} options={opcionesGrafica} />
+                ) : (
+                  <Line data={grafica} options={opcionesGrafica} />
+                )}
+              </div>
             </div>
             
           </div>
