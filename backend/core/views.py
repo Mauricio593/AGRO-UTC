@@ -15,7 +15,8 @@ import itertools
 
 from .models import *
 from .serializers import *
-from .knn import entrenar_knn, predecir
+# SE MODIFICÓ LA IMPORTACIÓN AQUÍ PARA INCLUIR evaluar_modelo_knn
+from .knn import entrenar_knn, predecir, evaluar_modelo_knn
 
 class CultivoViewSet(viewsets.ModelViewSet):
     queryset = Cultivo.objects.all()
@@ -317,24 +318,38 @@ def detectar_anomalias_existentes(request):
     preds = clf.fit_predict(X_np)
 
     anomalias_count = 0
+    datos_para_modelo = [] # Lista requerida para la validación cruzada
+
     for i in range(len(datos_lista)):
         is_anomaly = True if preds[i] == -1 else False
         datos_lista[i]['es_anomalia'] = is_anomaly
         if is_anomaly:
             anomalias_count += 1
+            
+        # Preparación de datos (Feature y Label) para la función de validación cruzada
+        datos_para_modelo.append({
+            'valores': X[i],
+            'label': 'ANOMALIA' if is_anomaly else 'NORMAL'
+        })
 
     primer_registro = registros.first()
     nombre_var = primer_registro.variable.nombre
     nombre_cultivo = primer_registro.experimento.unidad.cultivo.nombre
     nombre_lote = primer_registro.experimento.unidad.nombre
 
-    return Response({
+    # Dentro de tu vista en Django:
+    metricas_validacion = evaluar_modelo_knn(datos_para_modelo, k_folds=5)
+
+    # Luego agregas este diccionario a tu respuesta general
+    respuesta = {
         'detalles': datos_lista,
         'total_analizado': len(datos_lista),
         'total_anomalias': anomalias_count,
         'variable': nombre_var,
-        'contexto': f"{nombre_cultivo} - {nombre_lote} ({anio})"
-    })
+        'contexto': f"{nombre_cultivo} - {nombre_lote} ({anio})",
+        'metricas': metricas_validacion  # ¡Añades las métricas aquí!
+    }
+    return Response(respuesta)
 
 @api_view(['POST'])
 def registrar_usuario(request):
@@ -512,6 +527,7 @@ def datos_grafico_reporte(request):
         })
 
     return Response(lista_final)
+
 # Agrega esta nueva función en tu views.py
 @api_view(['DELETE'])
 def eliminar_usuario(request, pk):
