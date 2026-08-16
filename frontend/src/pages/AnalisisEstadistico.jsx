@@ -17,11 +17,9 @@ import {
 import { BoxPlotController, BoxAndWiskers } from '@sgratzl/chartjs-chart-boxplot';
 import ChartDataLabels from 'chartjs-plugin-datalabels';
 
-// Plugin personalizado para dibujar las letras del ANOVA
 const pluginLetrasANOVA = {
   id: 'letrasAnova',
   afterDatasetsDraw(chart, args, options) {
-    // 🔥 SOLUCIÓN 1: Evitar que el plugin falle si el gráfico no tiene la opción 'letras' configurada
     if (!options || !options.letras) return;
 
     const { ctx } = chart;
@@ -29,7 +27,6 @@ const pluginLetrasANOVA = {
     if (barDatasetIndex === -1) return;
 
     const meta = chart.getDatasetMeta(barDatasetIndex);
-    // 🔥 Verificación extra de seguridad para asegurar que los datos meta existan
     if (!meta || !meta.data) return;
     
     ctx.save();
@@ -220,7 +217,6 @@ const AnalisisEstadistico = ({
     const estiloParrafo = { fontSize: '10px', color: '#4b5563', margin: '5px 0 0 0', textAlign: 'justify', lineHeight: '1.2' };
     const estiloTitulo = { textAlign: 'center', fontSize: '12px', fontWeight: 'bold', margin: '0 0 8px 0' };
 
-    // 🔥 SOLUCIÓN 2: Asignamos una KEY única a cada gráfico para forzar la destrucción del Canvas viejo
     const canvasKey = `grafico-${tipo}-${nombreVariable.replace(/\s+/g, '')}`;
 
     switch(tipo) {
@@ -292,7 +288,7 @@ const AnalisisEstadistico = ({
   return (
     <div style={{ padding: '10px', fontFamily: 'Arial, sans-serif' }}>
       
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '10px', gap: '8px' }}>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '10px', gap: '8px', flexWrap: 'wrap' }}>
         <button onClick={previsualizarPDF} style={{ backgroundColor: '#45B7D1', color: 'white', padding: '6px 12px', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', fontSize: '12px' }}>👁️ Vista Previa</button>
         <button onClick={exportarPDF} style={{ backgroundColor: '#10b981', color: 'white', padding: '6px 12px', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', fontSize: '12px' }}>📄 PDF</button>
       </div>
@@ -301,7 +297,8 @@ const AnalisisEstadistico = ({
         
         <div style={{ textAlign: 'center', marginBottom: '12px', borderBottom: '2px solid black', paddingBottom: '8px' }}>
           <h2 style={{ margin: '0 0 4px 0', fontSize: '16px', textTransform: 'uppercase' }}>Reporte Estadístico</h2>
-          <div style={{ display: 'flex', justifyContent: 'center', gap: '15px', fontSize: '12px', color: '#374151' }}>
+          {/* 🔥 MODIFICADO: Agregué flexWrap para que la info baje si no hay espacio */}
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '15px', fontSize: '12px', color: '#374151', flexWrap: 'wrap' }}>
             <p style={{ margin: 0 }}>Cultivo: <strong>{nombreCultivo}</strong></p>
             <p style={{ margin: 0 }}>Mes: <strong>{nombreLote}</strong></p>
             <p style={{ margin: 0 }}>Año: <strong>{anio}</strong></p>
@@ -309,9 +306,10 @@ const AnalisisEstadistico = ({
           </div>
         </div>
 
-        <div style={{ marginBottom: '15px' }}>
+        {/* 🔥 MODIFICADO: Contenedor con overflowX para tablas anchas */}
+        <div style={{ marginBottom: '15px', overflowX: 'auto' }}>
           <h4 style={{ margin: '0 0 6px 0', fontSize: '13px' }}>1. Datos de Campo</h4>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px', minWidth: '400px' }}>
             <thead>
               <tr>
                 <th style={{ padding: '4px', borderBottom: '1px solid black', borderTop: '1px solid black', textAlign: 'left' }}>TRAT</th>
@@ -333,9 +331,10 @@ const AnalisisEstadistico = ({
           </table>
         </div>
 
-        <div style={{ marginBottom: '15px' }}>
+        {/* 🔥 MODIFICADO: Contenedor con overflowX para tablas anchas */}
+        <div style={{ marginBottom: '15px', overflowX: 'auto' }}>
           <h4 style={{ margin: '0 0 6px 0', fontSize: '13px' }}>2. Comparación de Medias</h4>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px', minWidth: '350px' }}>
             <thead>
               <tr>
                 <th style={{ padding: '4px', borderBottom: '1px solid #000', borderTop: '1px solid #000', textAlign: 'left' }}>TRATAMIENTO</th>
@@ -366,10 +365,11 @@ const AnalisisEstadistico = ({
         </div>
 
         <div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid black', paddingBottom: '4px', marginBottom: '10px' }}>
-            <h4 style={{ margin: 0, fontSize: '13px' }}>3. Gráficos</h4>
+          {/* 🔥 MODIFICADO: flexWrap para el selector de gráficos */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', borderBottom: '1px solid black', paddingBottom: '4px', marginBottom: '10px' }}>
+            <h4 style={{ margin: 0, fontSize: '13px', width: '100%', marginBottom: '10px' }}>3. Gráficos</h4>
             
-            <div data-html2canvas-ignore="true" style={{ display: 'flex', gap: '15px', fontSize: '11px' }}>
+            <div data-html2canvas-ignore="true" style={{ display: 'flex', flexWrap: 'wrap', gap: '15px', fontSize: '11px', width: '100%' }}>
               <div>
                 <label style={{ marginRight: '5px', fontWeight: 'bold' }}>Superior:</label>
                 <select value={grafico1} onChange={(e) => setGrafico1(e.target.value)} style={{ padding: '3px', fontSize: '11px' }}>
@@ -394,8 +394,8 @@ const AnalisisEstadistico = ({
           </div>
           
           <div style={{ display: 'flex', flexDirection: 'column', gap: '25px', marginTop: '10px' }}>
-            <div style={{ width: '100%' }}>{renderGrafico(grafico1)}</div>
-            <div style={{ width: '100%' }}>{renderGrafico(grafico2)}</div>
+            <div style={{ width: '100%', overflowX: 'auto' }}>{renderGrafico(grafico1)}</div>
+            <div style={{ width: '100%', overflowX: 'auto' }}>{renderGrafico(grafico2)}</div>
           </div>
         </div>
 

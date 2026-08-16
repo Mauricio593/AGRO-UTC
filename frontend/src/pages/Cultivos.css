@@ -122,6 +122,7 @@
 
 .context-option-row:hover { background-color: #f1f8e9; }
 .delete-option:hover { background-color: #ffebee; color: #d32f2f; }
+
 /* --- ESTILOS PARA LA VENTANA MODAL PERSONALIZADA --- */
 .modal-overlay {
   position: fixed;
@@ -160,7 +161,6 @@
   font-size: 1rem;
 }
 
-/* Letras rojas para advertencias */
 .texto-error {
   color: #e74c3c;
   font-size: 0.85rem;
@@ -199,4 +199,25 @@
 .btn-guardar:disabled {
   background: #95a5a6;
   cursor: not-allowed;
+}
+
+/* ========================================== */
+/* 🔥 NUEVO: DISEÑO RESPONSIVO PARA MÓVILES 🔥*/
+/* ========================================== */
+@media (max-width: 768px) {
+  .layout-split-container {
+    flex-direction: column; /* Apila los elementos uno debajo del otro */
+    padding: 10px;
+  }
+
+  .sidebar-right {
+    width: 100%;
+    order: -1; /* Mueve los filtros a la parte superior en celulares */
+    box-sizing: border-box;
+  }
+
+  .workspace-left {
+    width: 100%;
+    box-sizing: border-box;
+  }
 }

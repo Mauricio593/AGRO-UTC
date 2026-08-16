@@ -1,5 +1,5 @@
 .page-container {
-  background-color: #ffffff; /* Un azul/celeste muy suave y alegre de fondo */
+  background-color: #ffffff; 
   min-height: 100vh;
   padding-bottom: 60px;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -11,7 +11,6 @@
   padding: 0 20px;
 }
 
-/* Encabezado y botón regresar */
 .header-container {
   display: flex;
   align-items: center;
@@ -21,7 +20,7 @@
 
 .header-container h3 {
   margin: 0;
-  color: #0277bd; /* Azul profesional y vivo */
+  color: #0277bd;
   font-size: 24px;
 }
 
@@ -43,17 +42,15 @@
   transform: translateY(-1px);
 }
 
-/* Tabla Estilo SQL Alegre */
 .table-wrapper {
   background-color: white;
   border: 1px solid #f3f7f8;
   border-radius: 8px;
   margin-bottom: 25px;
   box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-  
-  /* --- MAGIA DEL SCROLL --- */
   max-height: 350px; 
-  overflow-y: auto;  
+  overflow-y: auto;
+  overflow-x: auto; /* Permite deslizar horizontalmente si la tabla es ancha */
 }
 
 .sql-table {
@@ -68,8 +65,6 @@
   padding: 12px;
   text-align: left;
   border: 1px solid #01579b;
-  
-  /* --- CABECERA CONGELADA --- */
   position: sticky; 
   top: 0;           
   z-index: 1;       
@@ -83,7 +78,7 @@
 }
 
 .sql-table tr:nth-child(even) {
-  background-color: #f1f8e9; /* Un verde súper clarito para filas pares */
+  background-color: #f1f8e9; 
 }
 
 .sql-table tr:nth-child(odd) {
@@ -91,11 +86,11 @@
 }
 
 .sql-table tr:hover {
-  background-color: #c2e990 !important; /* Celeste al pasar el mouse */
+  background-color: #c2e990 !important; 
 }
 
 .row-selected {
-  background-color: #092735 !important; /* Celeste más intenso al seleccionar */
+  background-color: #092735 !important; 
   color: white !important;
 }
 
@@ -106,11 +101,10 @@
 
 .valor-destacado {
   font-weight: bold;
-  color: #d84315; /* Un tono naranja/rojo alegre para resaltar el valor */
+  color: #d84315; 
   font-size: 15px;
 }
 
-/* Formulario Inferior */
 .form-card {
   background-color: white;
   border: 1px solid hsl(0, 0%, 100%);
@@ -148,20 +142,20 @@
   box-shadow: 0 0 8px rgb(228, 148, 148);
 }
 
-/* Botones de acción */
 .action-buttons {
   display: flex;
   justify-content: flex-end;
   gap: 15px;
   border-top: 2px dashed #0f0f0f;
   padding-top: 20px;
+  flex-wrap: wrap; /* Asegura que los botones bajen si no caben */
 }
 
 .btn {
-  padding: 2px 2px;
+  padding: 8px 12px; /* Mejoré el padding para que sea más fácil tocar en móvil */
   border: none;
   border-radius: 6px;
-  color: rgb(13, 14, 13);
+  color: white;
   cursor: pointer;
   font-weight: bold;
   font-size: 14px;
@@ -179,7 +173,30 @@
   transform: translateY(0);
 }
 
-.btn-add { background-color: #43a047; } /* Verde alegre */
-.btn-update { background-color: #fb8c00; } /* Naranja vivo para actualizar */
-.btn-delete { background-color: #e53935; } /* Rojo vivo */
-.btn-clear { background-color: #757575; } /* Gris neutro */
+.btn-add { background-color: #43a047; } 
+.btn-update { background-color: #fb8c00; } 
+.btn-delete { background-color: #e53935; } 
+.btn-clear { background-color: #757575; }
+
+/* ========================================== */
+/* 🔥 NUEVO: DISEÑO RESPONSIVO PARA MÓVILES 🔥*/
+/* ========================================== */
+@media (max-width: 768px) {
+  .form-grid {
+    grid-template-columns: 1fr; /* Cambia a 1 sola columna hacia abajo */
+    gap: 10px;
+  }
+
+  .form-label {
+    text-align: left; /* Alinea los textos de etiquetas a la izquierda */
+  }
+
+  .action-buttons {
+    flex-direction: column; /* Apila los botones de acción */
+    width: 100%;
+  }
+
+  .btn {
+    width: 100%; /* Botones a lo ancho de la pantalla para fácil toque */
+  }
+}
