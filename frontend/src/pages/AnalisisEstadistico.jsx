@@ -213,7 +213,8 @@ const AnalisisEstadistico = ({
   };
 
   const renderGrafico = (tipo) => {
-    const alturaGrafico = '280px'; 
+    // 🔥 MODIFICADO: Altura reducida a 200px para que encaje mejor en el PDF
+    const alturaGrafico = '200px'; 
     const estiloParrafo = { fontSize: '10px', color: '#4b5563', margin: '5px 0 0 0', textAlign: 'justify', lineHeight: '1.2' };
     const estiloTitulo = { textAlign: 'center', fontSize: '12px', fontWeight: 'bold', margin: '0 0 8px 0' };
 
@@ -297,7 +298,6 @@ const AnalisisEstadistico = ({
         
         <div style={{ textAlign: 'center', marginBottom: '12px', borderBottom: '2px solid black', paddingBottom: '8px' }}>
           <h2 style={{ margin: '0 0 4px 0', fontSize: '16px', textTransform: 'uppercase' }}>Reporte Estadístico</h2>
-          {/* 🔥 MODIFICADO: Agregué flexWrap para que la info baje si no hay espacio */}
           <div style={{ display: 'flex', justifyContent: 'center', gap: '15px', fontSize: '12px', color: '#374151', flexWrap: 'wrap' }}>
             <p style={{ margin: 0 }}>Cultivo: <strong>{nombreCultivo}</strong></p>
             <p style={{ margin: 0 }}>Mes: <strong>{nombreLote}</strong></p>
@@ -306,7 +306,6 @@ const AnalisisEstadistico = ({
           </div>
         </div>
 
-        {/* 🔥 MODIFICADO: Contenedor con overflowX para tablas anchas */}
         <div style={{ marginBottom: '15px', overflowX: 'auto' }}>
           <h4 style={{ margin: '0 0 6px 0', fontSize: '13px' }}>1. Datos de Campo</h4>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px', minWidth: '400px' }}>
@@ -331,7 +330,6 @@ const AnalisisEstadistico = ({
           </table>
         </div>
 
-        {/* 🔥 MODIFICADO: Contenedor con overflowX para tablas anchas */}
         <div style={{ marginBottom: '15px', overflowX: 'auto' }}>
           <h4 style={{ margin: '0 0 6px 0', fontSize: '13px' }}>2. Comparación de Medias</h4>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px', minWidth: '350px' }}>
@@ -365,7 +363,6 @@ const AnalisisEstadistico = ({
         </div>
 
         <div>
-          {/* 🔥 MODIFICADO: flexWrap para el selector de gráficos */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', borderBottom: '1px solid black', paddingBottom: '4px', marginBottom: '10px' }}>
             <h4 style={{ margin: 0, fontSize: '13px', width: '100%', marginBottom: '10px' }}>3. Gráficos</h4>
             
@@ -393,7 +390,8 @@ const AnalisisEstadistico = ({
             </div>
           </div>
           
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '25px', marginTop: '10px' }}>
+          {/* 🔥 MODIFICADO: gap reducido a 15px para ahorrar espacio entre gráficos */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', marginTop: '10px' }}>
             <div style={{ width: '100%', overflowX: 'auto' }}>{renderGrafico(grafico1)}</div>
             <div style={{ width: '100%', overflowX: 'auto' }}>{renderGrafico(grafico2)}</div>
           </div>
