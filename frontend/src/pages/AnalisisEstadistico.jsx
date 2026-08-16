@@ -213,7 +213,6 @@ const AnalisisEstadistico = ({
   };
 
   const renderGrafico = (tipo) => {
-    // 🔥 MODIFICADO: Altura reducida a 200px para que encaje mejor en el PDF
     const alturaGrafico = '200px'; 
     const estiloParrafo = { fontSize: '10px', color: '#4b5563', margin: '5px 0 0 0', textAlign: 'justify', lineHeight: '1.2' };
     const estiloTitulo = { textAlign: 'center', fontSize: '12px', fontWeight: 'bold', margin: '0 0 8px 0' };
@@ -275,11 +274,17 @@ const AnalisisEstadistico = ({
     }
   };
 
+  // 🔥 MODIFICADO: Configuraciones avanzadas para alta calidad en PDF
   const obtenerOpcionesPDF = () => ({
-    margin:       0.2, 
+    margin:       [0.4, 0.4, 0.4, 0.4], // Márgenes más amplios y parejos [arriba, derecha, abajo, izquierda]
     filename:     `Reporte_Estadistico.pdf`,
-    image:        { type: 'jpeg', quality: 1 },
-    html2canvas:  { scale: 2 },
+    image:        { type: 'png' }, // PNG mantiene mucho mejor la nitidez que JPEG
+    html2canvas:  { 
+      scale: 4, // 🚀 Aumenta radicalmente la resolución para evitar lo borroso
+      useCORS: true, 
+      letterRendering: true,
+      windowWidth: 850 // 🚀 Obliga a generar el layout con este ancho, evitando deformaciones
+    },
     jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
   });
 
@@ -390,7 +395,6 @@ const AnalisisEstadistico = ({
             </div>
           </div>
           
-          {/* 🔥 MODIFICADO: gap reducido a 15px para ahorrar espacio entre gráficos */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', marginTop: '10px' }}>
             <div style={{ width: '100%', overflowX: 'auto' }}>{renderGrafico(grafico1)}</div>
             <div style={{ width: '100%', overflowX: 'auto' }}>{renderGrafico(grafico2)}</div>
