@@ -8,6 +8,7 @@
   justify-content: space-between;
   align-items: center;
   padding: 10px 20px;           /* Reducido el padding vertical para que no ocupe tanta altura */
+  position: relative;           /* Necesario para posicionar el menú móvil */
 }
 
 .navbar h2 {
@@ -25,7 +26,7 @@
   color: rgb(8, 38, 172);
   text-decoration: none;
   font-weight: 700;             /* Cambiado a 700 (Bold estándar) para evitar distorsiones */
-  padding: 8px 16px;            /* ¡CORREGIDO! Espaciado interno normal y equilibrado */
+  padding: 8px 16px;            /* Espaciado interno normal y equilibrado */
   border-radius: 4px;           /* Añade esquinas ligeramente suaves a los botones de navegación */
   transition: all 0.2s ease;    /* Transición suave para el efecto hover */
 }
@@ -43,4 +44,66 @@
   border-radius: 5px;
   cursor: pointer;
   font-weight: bold;
+}
+
+/* ===== CONFIGURACIÓN PARA MÓVILES (NUEVO) ===== */
+
+/* Ocultar elementos móviles por defecto (en computadoras) */
+.menu-icon {
+  display: none;
+  font-size: 28px;
+  cursor: pointer;
+  color: rgb(8, 38, 172);
+  user-select: none;
+}
+
+.mobile-logout {
+  display: none;
+}
+
+/* Reglas aplicables solo cuando la pantalla es pequeña (768px o menos) */
+@media (max-width: 768px) {
+  
+  .menu-icon {
+    display: block; 
+  }
+
+  .desktop-logout {
+    display: none; 
+  }
+
+  .mobile-logout {
+    display: block; 
+    width: 100%;
+    margin-top: 10px;
+  }
+
+  .nav-links {
+    display: none; 
+    flex-direction: column;
+    position: absolute;
+    top: 100%; 
+    left: 0;
+    width: 100%;
+    background: #cedbeb;
+    padding: 15px;
+    box-sizing: border-box;
+    box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.2); 
+    z-index: 9999;
+  }
+
+  .nav-links.active {
+    display: flex;
+  }
+
+  .nav-links a {
+    width: 100%;
+    text-align: center;
+    padding: 12px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1); 
+  }
+
+  .nav-links a:last-child {
+    border-bottom: none;
+  }
 }

@@ -14,4 +14,19 @@ API.interceptors.request.use((config) => {
   return config;
 });
 
+// NUEVO: Interceptor para manejar el error 401 (Sesión expirada)
+API.interceptors.response.use(
+  (response) => response, 
+  (error) => {
+    if (error.response && error.response.status === 401) {
+      console.warn("Sesión expirada o token inválido. Redirigiendo al Login...");
+      localStorage.removeItem("token");
+      localStorage.removeItem("username");
+      localStorage.removeItem("rol");
+      window.location.href = "/"; 
+    }
+    return Promise.reject(error);
+  }
+);
+
 export default API;
