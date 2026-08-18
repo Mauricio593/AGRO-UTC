@@ -1,18 +1,15 @@
 import React, { useState, useEffect } from "react";
-import API from "../services/api"; // Importación centralizada
+import API from "../services/api"; 
 import Navbar from "../components/Navbar";
 
-// Importación del CSS separado
 import "./KNN.css"; 
 
-// 1. Añadimos PointElement y LineElement para el gráfico de líneas
 import { Chart as ChartJS, BarElement, CategoryScale, LinearScale, Tooltip, Legend, PointElement, LineElement } from "chart.js";
 import { Bar, Line } from "react-chartjs-2";
 
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
-// 2. Registramos los nuevos elementos para que ChartJS los reconozca
 ChartJS.register(BarElement, CategoryScale, LinearScale, Tooltip, Legend, PointElement, LineElement);
 
 function KNN() {
@@ -23,10 +20,8 @@ function KNN() {
   const [loading, setLoading] = useState(false);
   const [grafica, setGrafica] = useState(null);
   
-  // 3. Nuevo estado para controlar el tipo de gráfica
   const [tipoGrafico, setTipoGrafico] = useState("bar"); 
 
-  // A. Cargar Cultivos y Variables al abrir la pantalla
   useEffect(() => {
     API.get('cultivos/')
       .then(res => setListas(prev => ({ ...prev, cultivos: res.data })))
@@ -42,7 +37,6 @@ function KNN() {
       .catch(err => console.error("Error cargando variables:", err));
   }, []);
 
-  // B. Cargar Lotes SOLO del Cultivo seleccionado
   useEffect(() => {
     if (filtros.cultivoId) {
       API.get(`unidades/?cultivo=${filtros.cultivoId}`)
@@ -53,7 +47,6 @@ function KNN() {
     }
   }, [filtros.cultivoId]);
 
-  // C. Cargar Años SOLO del Lote seleccionado
   useEffect(() => {
     if (filtros.loteId) {
       API.get(`experimentos/?unidad=${filtros.loteId}`)
@@ -87,7 +80,6 @@ function KNN() {
       setReporte(res.data);
 
       setGrafica({
-        // 4. Validación para evitar imprimir 'P:null'. Si es null, solo muestra la repetición.
         labels: res.data.detalles.map(d => d.planta ? `P:${d.planta} R:${d.repeticion}` : `R:${d.repeticion}`),
         datasets: [{
           label: `Valores de ${res.data.variable}`,
@@ -96,12 +88,12 @@ function KNN() {
           borderColor: res.data.detalles.map(d => d.es_anomalia ? "rgba(211, 47, 47, 1)" : "rgba(2, 119, 189, 1)"),
           borderWidth: 1,
           borderRadius: 4,
-          tension: 0.3 // Da un efecto curvo si se usa el gráfico de líneas
+          tension: 0.3 
         }]
       });
     } catch (error) {
-      console.error("Detalle completo del error del servidor:", error.response?.data);
-      alert(error.response?.data?.error || "Error al conectar con el servidor para procesar KNN. Revisa la consola.");
+      console.error("Detalle error:", error.response?.data);
+      alert(error.response?.data?.error || "Error procesando análisis.");
     } finally {
       setLoading(false);
     }
@@ -125,13 +117,12 @@ function KNN() {
 
       let conclusion = "";
       if (desvioPorcentaje > 150 || anom.valor === 0) {
-        conclusion = `⚠️ Probable Error de Digitación: El valor (${anom.valor}) presenta una desviación crítica del ${desvioPorcentaje}% respecto al comportamiento general. Se sugiere verificar las bitácoras físicas.`;
+        conclusion = `⚠️ Probable Error: Desviación crítica del ${desvioPorcentaje}%. Verificar bitácoras físicas.`;
       } else {
-        conclusion = `🌱 Desviación Biológica / Mutación: Registra una variación del ${desvioPorcentaje}% del estándar. Puede tratarse de una respuesta atípica del explante al tratamiento ${anom.tratamiento}.`;
+        conclusion = `🌱 Variación Atípica: Registra una desviación del ${desvioPorcentaje}% al tratamiento ${anom.tratamiento}.`;
       }
 
       return {
-        // 5. Ocultamos 'Planta null' del diagnóstico
         identificador: anom.planta ? `Planta ${anom.planta} (Repetición ${anom.repeticion})` : `Repetición ${anom.repeticion}`,
         tratamiento: anom.tratamiento,
         valor: anom.valor,
@@ -141,7 +132,6 @@ function KNN() {
   };
 
   const listaAnomaliasDetalladas = procesarDetalleAnomalias();
-
   const getNombreCultivo = () => listas.cultivos.find(c => c.id.toString() === filtros.cultivoId)?.nombre || '';
   const getNombreLote = () => listas.lotes.find(l => l.id.toString() === filtros.loteId)?.nombre || '';
 
@@ -151,21 +141,14 @@ function KNN() {
 
     doc.setFontSize(18);
     doc.setTextColor(40);
-    doc.text("Reporte de Auditoría de Anomalías (KNN/LOF)", 14, 22);
+    doc.text("Reporte de Auditoría de Anomalías", 14, 22);
     
     doc.setFontSize(10);
-    doc.text(`Fecha de generación: ${fecha}`, 14, 30);
-    doc.text(`Laboratorio UTC - Sistema In Vitro`, 14, 35);
-
-    doc.setFontSize(12);
-    doc.text("Resumen del Análisis:", 14, 45);
-    doc.setFontSize(10);
-    doc.text(`Cultivo: ${getNombreCultivo()} | Lote: ${getNombreLote()} | Año: ${filtros.anio}`, 14, 52);
-    doc.text(`Variable analizada: ${reporte.variable}`, 14, 57);
-    doc.text(`Total Registros: ${reporte.total_analizado} | Anomalías: ${reporte.total_anomalias}`, 14, 62);
+    doc.text(`Fecha: ${fecha} | Laboratorio UTC`, 14, 30);
+    doc.text(`Cultivo: ${getNombreCultivo()} | Lote: ${getNombreLote()} | Año: ${filtros.anio}`, 14, 40);
+    doc.text(`Total Registros: ${reporte.total_analizado} | Anomalías: ${reporte.total_anomalias}`, 14, 45);
 
     const tableData = reporte.detalles.map(d => [
-      // 6. Ocultamos el nulo en la tabla del PDF
       d.planta ? `${d.planta} (R: ${d.repeticion})` : `R: ${d.repeticion}`,
       d.tratamiento,
       d.valor,
@@ -173,8 +156,8 @@ function KNN() {
     ]);
 
     autoTable(doc, {
-      startY: 70,
-      head: [['Planta (Rep)', 'Tratamiento', `Valor (${reporte.variable})`, 'Estado']],
+      startY: 55,
+      head: [['Identificador', 'Tratamiento', 'Valor', 'Estado']],
       body: tableData,
       didParseCell: (data) => {
         if (data.section === 'body' && data.column.index === 3) {
@@ -187,31 +170,14 @@ function KNN() {
         }
       }
     });
-
-    const canvas = document.querySelector('canvas');
-    if (canvas) {
-      const imgData = canvas.toDataURL("image/png");
-      const currentY = doc.lastAutoTable.finalY + 10;
-      
-      if (currentY > 200) {
-        doc.addPage();
-        doc.text("Gráfica de Distribución y Desviaciones:", 14, 20);
-        doc.addImage(imgData, 'PNG', 15, 30, 180, 80);
-      } else {
-        doc.text("Gráfica de Distribución y Desviaciones:", 14, currentY);
-        doc.addImage(imgData, 'PNG', 15, currentY + 5, 180, 80);
-      }
-    }
-
-    doc.save(`Reporte_Auditoria_${getNombreCultivo()}_${reporte.variable}.pdf`);
+    doc.save(`Auditoria_${getNombreCultivo()}.pdf`);
   };
 
-  // 7. Opciones de estilo compartidas para ambas gráficas (Barras y Líneas)
   const opcionesGrafica = { 
     responsive: true, 
     maintainAspectRatio: false, 
     plugins: { legend: { display: false } },
-    scales: { y: { title: { display: true, text: `Escala (${reporte?.variable})`, font: { weight: 'bold' } } } }
+    scales: { y: { title: { display: true, text: `Escala`, font: { weight: 'bold' } } } }
   };
 
   return (
@@ -220,62 +186,39 @@ function KNN() {
       <div className="main-container">
         
         <div className="header-container">
-          <h3>🔍 ANOMALIAS </h3>
+          <h3>🔍 AUDITORÍA DE ANOMALÍAS (KNN / LOF / I-Forest) </h3>
           <p style={{ color: "#64748b", marginTop: "5px", marginBottom: 0 }}>
-            Análisis matemático multidimensional mediante vecinos más cercanos (KNN) para la detección de incongruencias.
+            Análisis multidimensional de algoritmos de Machine Learning para detección de inconsistencias.
           </p>
         </div>
 
         <div className="form-card">
           <div className="grid-filters">
-            
             <div className="filter-item">
               <label className="form-label">1. Cultivo:</label>
-              <select 
-                className="form-input" 
-                value={filtros.cultivoId} 
-                onChange={e => setFiltros({ cultivoId: e.target.value, loteId: "", anio: "", variable: "" })}
-              >
-                <option value="">-- Seleccione Cultivo --</option>
+              <select className="form-input" value={filtros.cultivoId} onChange={e => setFiltros({ cultivoId: e.target.value, loteId: "", anio: "", variable: "" })}>
+                <option value="">-- Seleccione --</option>
                 {listas.cultivos.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
               </select>
             </div>
-
             <div className="filter-item">
-              <label className="form-label">2. Lote/Unidad:</label>
-              <select 
-                className="form-input" 
-                value={filtros.loteId} 
-                disabled={!filtros.cultivoId}
-                onChange={e => setFiltros({ ...filtros, loteId: e.target.value, anio: "", variable: "" })}
-              >
-                <option value="">-- Seleccione Lote --</option>
+              <label className="form-label">2. Lote:</label>
+              <select className="form-input" value={filtros.loteId} disabled={!filtros.cultivoId} onChange={e => setFiltros({ ...filtros, loteId: e.target.value, anio: "", variable: "" })}>
+                <option value="">-- Seleccione --</option>
                 {listas.lotes.map(l => <option key={l.id} value={l.id}>{l.nombre}</option>)}
               </select>
             </div>
-
             <div className="filter-item">
               <label className="form-label">3. Año:</label>
-              <select 
-                className="form-input" 
-                value={filtros.anio} 
-                disabled={!filtros.loteId}
-                onChange={e => setFiltros({ ...filtros, anio: e.target.value, variable: "" })}
-              >
-                <option value="">-- Seleccione Año --</option>
+              <select className="form-input" value={filtros.anio} disabled={!filtros.loteId} onChange={e => setFiltros({ ...filtros, anio: e.target.value, variable: "" })}>
+                <option value="">-- Seleccione --</option>
                 {listas.anios.map((anio, i) => <option key={i} value={anio}>{anio}</option>)}
               </select>
             </div>
-
             <div className="filter-item">
               <label className="form-label">4. Variable:</label>
-              <select 
-                className="form-input" 
-                value={filtros.variable} 
-                disabled={!filtros.anio}
-                onChange={e => setFiltros({ ...filtros, variable: e.target.value })}
-              >
-                <option value="">-- Seleccione Variable --</option>
+              <select className="form-input" value={filtros.variable} disabled={!filtros.anio} onChange={e => setFiltros({ ...filtros, variable: e.target.value })}>
+                <option value="">-- Seleccione --</option>
                 {listas.variables.map((v, i) => <option key={i} value={v.id}>{v.nombre}</option>)}
               </select>
             </div>
@@ -283,13 +226,10 @@ function KNN() {
           
           <div className="action-buttons">
             <button onClick={analizarDatos} className="btn btn-add" disabled={loading}>
-              {loading ? "⏳ Procesando Muestras..." : "🔍 Iniciar Análisis Computacional"}
+              {loading ? "⏳ Procesando Modelos..." : "🔍 Ejecutar Inteligencia Artificial"}
             </button>
-            
             {reporte && (
-              <button onClick={generarPDF} className="btn" style={{ backgroundColor: "#ef4444", color: "white" }}>
-                📄 Exportar Documento PDF
-              </button>
+              <button onClick={generarPDF} className="btn" style={{ backgroundColor: "#ef4444", color: "white" }}>📄 Exportar PDF</button>
             )}
           </div>
         </div>
@@ -300,66 +240,64 @@ function KNN() {
             <div className="form-card resumen-card">
               <h3 style={{ margin: "0 0 10px 0", color: "#1e293b" }}>{reporte.contexto}</h3>
               <p style={{ fontSize: "1.1em", margin: 0, color: "#475569" }}>
-                Puntos de control analizados: <strong>{reporte.total_analizado}</strong> | 
-                Aislados Atípicos (Anomalías): <strong style={{color: "#d32f2f"}}>{reporte.total_anomalias}</strong>
+                Puntos de control: <strong>{reporte.total_analizado}</strong> | Anomalías Encontradas: <strong style={{color: "#d32f2f"}}>{reporte.total_anomalias}</strong>
               </p>
             </div>
 
-            {reporte.metricas && (
+            {/* SECCIÓN NUEVA: Comparativa de 3 Algoritmos */}
+            {reporte.metricas && reporte.metricas.KNN && (
               <div className="form-card" style={{ marginTop: "20px", marginBottom: "20px" }}>
-                <h4 style={{ borderBottom: "2px solid #e2e8f0", paddingBottom: "10px", marginTop: 0 }}>📊 Evaluación del Modelo (Validación Cruzada k-fold)</h4>
+                <h4 style={{ borderBottom: "2px solid #e2e8f0", paddingBottom: "10px", marginTop: 0 }}>
+                  🤖 Comparativa de Rendimiento (Machine Learning)
+                </h4>
                 
-                <div style={{ display: "flex", gap: "15px", flexWrap: "wrap", marginTop: "15px" }}>
-                  <div style={{ flex: 1, minWidth: "120px", padding: "15px", backgroundColor: "#f8fafc", borderRadius: "8px", textAlign: "center", border: "1px solid #e2e8f0" }}>
-                    <span style={{ display: "block", fontSize: "0.9em", color: "#64748b" }}>Exactitud (Accuracy)</span>
-                    <strong style={{ fontSize: "1.5em", color: "#0f172a" }}>{reporte.metricas.accuracy}%</strong>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: "20px", marginTop: "15px" }}>
+                  
+                  {/* Tarjeta KNN */}
+                  <div style={{ padding: "15px", backgroundColor: "#f0f9ff", border: "1px solid #bae6fd", borderRadius: "8px" }}>
+                    <h5 style={{ margin: "0 0 12px 0", color: "#0369a1", textAlign: "center", fontSize:"15px" }}>K-Nearest Neighbors (KNN)</h5>
+                    <ul style={{ listStyle: "none", padding: 0, margin: 0, color: "#334155", fontSize: "14px" }}>
+                      <li style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}><span>Exactitud:</span> <strong>{reporte.metricas.KNN.accuracy}%</strong></li>
+                      <li style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}><span>Precisión:</span> <strong>{reporte.metricas.KNN.precision}%</strong></li>
+                      <li style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}><span>Sensibilidad:</span> <strong>{reporte.metricas.KNN.recall}%</strong></li>
+                      <li style={{ display: "flex", justifyContent: "space-between" }}><span>F1-Score:</span> <strong>{reporte.metricas.KNN.f1_score}%</strong></li>
+                    </ul>
                   </div>
-                  <div style={{ flex: 1, minWidth: "120px", padding: "15px", backgroundColor: "#f8fafc", borderRadius: "8px", textAlign: "center", border: "1px solid #e2e8f0" }}>
-                    <span style={{ display: "block", fontSize: "0.9em", color: "#64748b" }}>Precisión</span>
-                    <strong style={{ fontSize: "1.5em", color: "#0f172a" }}>{reporte.metricas.precision}%</strong>
-                  </div>
-                  <div style={{ flex: 1, minWidth: "120px", padding: "15px", backgroundColor: "#f8fafc", borderRadius: "8px", textAlign: "center", border: "1px solid #e2e8f0" }}>
-                    <span style={{ display: "block", fontSize: "0.9em", color: "#64748b" }}>Sensibilidad (Recall)</span>
-                    <strong style={{ fontSize: "1.5em", color: "#0f172a" }}>{reporte.metricas.recall}%</strong>
-                  </div>
-                  <div style={{ flex: 1, minWidth: "120px", padding: "15px", backgroundColor: "#f8fafc", borderRadius: "8px", textAlign: "center", border: "1px solid #e2e8f0" }}>
-                    <span style={{ display: "block", fontSize: "0.9em", color: "#64748b" }}>F1-Score</span>
-                    <strong style={{ fontSize: "1.5em", color: "#0f172a" }}>{reporte.metricas.f1_score}%</strong>
-                  </div>
-                </div>
 
-                {reporte.metricas.matriz_confusion && (
-                  <div style={{ marginTop: "20px" }}>
-                    <h5 style={{ color: "#475569", marginBottom: "10px" }}>Matriz de Confusión</h5>
-                    <table style={{ width: "100%", maxWidth: "300px", borderCollapse: "collapse", textAlign: "center" }}>
-                      <tbody>
-                        {reporte.metricas.matriz_confusion.map((fila, i) => (
-                          <tr key={i}>
-                            {fila.map((valor, j) => (
-                              <td key={j} style={{ border: "1px solid #cbd5e1", padding: "12px", backgroundColor: i === j ? "#f0fdf4" : "#fef2f2" }}>
-                                <strong style={{ color: i === j ? "#16a34a" : "#dc2626" }}>{valor}</strong>
-                              </td>
-                            ))}
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                    <small style={{ color: "#94a3b8", display: "block", marginTop: "5px" }}>* Las celdas en verde indican las predicciones correctas del algoritmo.</small>
+                  {/* Tarjeta Isolation Forest */}
+                  <div style={{ padding: "15px", backgroundColor: "#fdf4ff", border: "1px solid #fbcfe8", borderRadius: "8px" }}>
+                    <h5 style={{ margin: "0 0 12px 0", color: "#be185d", textAlign: "center", fontSize:"15px" }}>Isolation Forest</h5>
+                    <ul style={{ listStyle: "none", padding: 0, margin: 0, color: "#334155", fontSize: "14px" }}>
+                      <li style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}><span>Exactitud:</span> <strong>{reporte.metricas.IsolationForest.accuracy}%</strong></li>
+                      <li style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}><span>Precisión:</span> <strong>{reporte.metricas.IsolationForest.precision}%</strong></li>
+                      <li style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}><span>Sensibilidad:</span> <strong>{reporte.metricas.IsolationForest.recall}%</strong></li>
+                      <li style={{ display: "flex", justifyContent: "space-between" }}><span>F1-Score:</span> <strong>{reporte.metricas.IsolationForest.f1_score}%</strong></li>
+                    </ul>
                   </div>
-                )}
+
+                  {/* Tarjeta LOF */}
+                  <div style={{ padding: "15px", backgroundColor: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: "8px" }}>
+                    <h5 style={{ margin: "0 0 12px 0", color: "#15803d", textAlign: "center", fontSize:"15px" }}>Local Outlier Factor (LOF)</h5>
+                    <ul style={{ listStyle: "none", padding: 0, margin: 0, color: "#334155", fontSize: "14px" }}>
+                      <li style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}><span>Exactitud:</span> <strong>{reporte.metricas.LOF.accuracy}%</strong></li>
+                      <li style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}><span>Precisión:</span> <strong>{reporte.metricas.LOF.precision}%</strong></li>
+                      <li style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}><span>Sensibilidad:</span> <strong>{reporte.metricas.LOF.recall}%</strong></li>
+                      <li style={{ display: "flex", justifyContent: "space-between" }}><span>F1-Score:</span> <strong>{reporte.metricas.LOF.f1_score}%</strong></li>
+                    </ul>
+                  </div>
+
+                </div>
               </div>
             )}
+            {/* FIN SECCIÓN COMPARATIVA */}
 
             {listaAnomaliasDetalladas.length > 0 && (
               <div className="anomaly-diagnostic-panel">
                 <div className="diagnostic-card">
-                  <h4>⚠️ Diagnóstico Técnico de Variabilidad Agronómica</h4>
+                  <h4>⚠️ Diagnóstico Técnico</h4>
                   <ul className="diagnostic-list">
                     {listaAnomaliasDetalladas.map((item, index) => (
-                      <li key={index}>
-                        En la <strong>{item.identificador}</strong> bajo el tratamiento <strong>{item.tratamiento}</strong>: 
-                        {item.conclusion}
-                      </li>
+                      <li key={index}>En <strong>{item.identificador}</strong> (Trat: {item.tratamiento}): {item.conclusion}</li>
                     ))}
                   </ul>
                 </div>
@@ -372,19 +310,18 @@ function KNN() {
                   <tr>
                     <th>Identificador</th>
                     <th>Tratamiento</th>
-                    <th>Valor Registrado ({reporte.variable})</th>
+                    <th>Valor</th>
                     <th>Estado</th>
                   </tr>
                 </thead>
                 <tbody>
                   {reporte.detalles.map((d, i) => (
                     <tr key={i} style={{ backgroundColor: d.es_anomalia ? "#fef2f2" : "transparent" }}>
-                      {/* 8. Validación para ocultar nulos en la tabla de resultados */}
                       <td>{d.planta ? `${d.planta} (R: ${d.repeticion})` : `Repetición ${d.repeticion}`}</td>
                       <td>{d.tratamiento}</td>
                       <td style={{ fontWeight: "bold" }}>{d.valor}</td>
                       <td style={{ color: d.es_anomalia ? "#dc2626" : "#16a34a", fontWeight: "bold" }}>
-                        {d.es_anomalia ? "⚠️ REGISTRO ATÍPICO" : "✅ DENTRO DEL RANGO"}
+                        {d.es_anomalia ? "⚠️ ATÍPICO" : "✅ NORMAL"}
                       </td>
                     </tr>
                   ))}
@@ -393,28 +330,17 @@ function KNN() {
             </div>
 
             <div className="form-card">
-              {/* 9. Botones o selector para cambiar el tipo de gráfica dinámicamente */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
-                <h4 style={{ margin: 0, color: "#475569" }}>Representación Gráfica</h4>
+                <h4 style={{ margin: 0, color: "#475569" }}>Distribución de Datos</h4>
                 <div>
-                  <label style={{ marginRight: '10px', fontSize: '14px', fontWeight: 'bold', color: '#64748b' }}>Visualización:</label>
-                  <select 
-                    value={tipoGrafico} 
-                    onChange={(e) => setTipoGrafico(e.target.value)} 
-                    style={{ padding: '6px', borderRadius: '4px', border: '1px solid #cbd5e1' }}
-                  >
-                    <option value="bar">📊 Gráfico de Barras</option>
-                    <option value="line">📉 Gráfico de Líneas</option>
+                  <select value={tipoGrafico} onChange={(e) => setTipoGrafico(e.target.value)} style={{ padding: '6px', borderRadius: '4px', border: '1px solid #cbd5e1' }}>
+                    <option value="bar">📊 Barras</option>
+                    <option value="line">📉 Líneas</option>
                   </select>
                 </div>
               </div>
-
               <div className="chart-container" style={{ height: "400px" }}>
-                {tipoGrafico === "bar" ? (
-                  <Bar data={grafica} options={opcionesGrafica} />
-                ) : (
-                  <Line data={grafica} options={opcionesGrafica} />
-                )}
+                {tipoGrafico === "bar" ? <Bar data={grafica} options={opcionesGrafica} /> : <Line data={grafica} options={opcionesGrafica} />}
               </div>
             </div>
             
