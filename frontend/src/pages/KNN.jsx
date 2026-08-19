@@ -1,15 +1,18 @@
 import React, { useState, useEffect } from "react";
-import API from "../services/api"; 
+import API from "../services/api"; // Importación centralizada
 import Navbar from "../components/Navbar";
 
+// Importación del CSS separado
 import "./KNN.css"; 
 
+// 1. Añadimos PointElement y LineElement para el gráfico de líneas
 import { Chart as ChartJS, BarElement, CategoryScale, LinearScale, Tooltip, Legend, PointElement, LineElement } from "chart.js";
 import { Bar, Line } from "react-chartjs-2";
 
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
+// 2. Registramos los nuevos elementos para que ChartJS los reconozca
 ChartJS.register(BarElement, CategoryScale, LinearScale, Tooltip, Legend, PointElement, LineElement);
 
 function KNN() {
@@ -20,15 +23,13 @@ function KNN() {
   const [loading, setLoading] = useState(false);
   const [grafica, setGrafica] = useState(null);
   
+  // 3. Nuevo estado para controlar el tipo de gráfica
   const [tipoGrafico, setTipoGrafico] = useState("bar"); 
 
+  // A. Cargar Cultivos y Variables al abrir la pantalla
   useEffect(() => {
     API.get('cultivos/')
-      .then(res => {
-        // ORDEN ALFABÉTICO: Cultivos por nombre
-        const cultivosOrdenados = res.data.sort((a, b) => a.nombre.localeCompare(b.nombre));
-        setListas(prev => ({ ...prev, cultivos: cultivosOrdenados }));
-      })
+      .then(res => setListas(prev => ({ ...prev, cultivos: res.data })))
       .catch(err => console.error("Error cargando cultivos:", err));
 
     API.get('variables/')
@@ -36,35 +37,29 @@ function KNN() {
         const variablesUnicas = res.data.filter((v, index, self) =>
           index === self.findIndex((t) => t.nombre === v.nombre)
         );
-        // ORDEN ALFABÉTICO: Variables por nombre
-        const variablesOrdenadas = variablesUnicas.sort((a, b) => a.nombre.localeCompare(b.nombre));
-        setListas(prev => ({ ...prev, variables: variablesOrdenadas }));
+        setListas(prev => ({ ...prev, variables: variablesUnicas }));
       })
       .catch(err => console.error("Error cargando variables:", err));
   }, []);
 
+  // B. Cargar Lotes SOLO del Cultivo seleccionado
   useEffect(() => {
     if (filtros.cultivoId) {
       API.get(`unidades/?cultivo=${filtros.cultivoId}`)
-        .then(res => {
-          // ORDEN ALFABÉTICO: Lotes por nombre
-          const lotesOrdenados = res.data.sort((a, b) => a.nombre.localeCompare(b.nombre));
-          setListas(prev => ({ ...prev, lotes: lotesOrdenados }));
-        })
+        .then(res => setListas(prev => ({ ...prev, lotes: res.data })))
         .catch(err => console.error("Error cargando lotes:", err));
     } else {
       setListas(prev => ({ ...prev, lotes: [], anios: [] }));
     }
   }, [filtros.cultivoId]);
 
+  // C. Cargar Años SOLO del Lote seleccionado
   useEffect(() => {
     if (filtros.loteId) {
       API.get(`experimentos/?unidad=${filtros.loteId}`)
         .then(res => {
           const aniosUnicos = [...new Set(res.data.map(a => a.anio))];
-          // ORDEN NUMÉRICO: Años de menor a mayor
-          const aniosOrdenados = aniosUnicos.sort((a, b) => a - b);
-          setListas(prev => ({ ...prev, anios: aniosOrdenados }));
+          setListas(prev => ({ ...prev, anios: aniosUnicos }));
         })
         .catch(err => console.error("Error cargando años:", err));
     } else {
@@ -89,36 +84,10 @@ function KNN() {
         }
       });
 
-      // ORDENAMIENTO ALFABÉTICO Y NUMÉRICO DE LOS DETALLES
-      const detallesOrdenados = res.data.detalles.sort((a, b) => {
-        // 1. Ordenar alfabéticamente por Tratamiento
-        const tratA = a.tratamiento || "";
-        const tratB = b.tratamiento || "";
-        const comparacionTratamiento = tratA.toString().localeCompare(tratB.toString());
-        
-        if (comparacionTratamiento !== 0) {
-          return comparacionTratamiento; // Si los tratamientos son diferentes, ordena alfabéticamente
-        }
-
-        // 2. Si es el mismo tratamiento, ordena numéricamente por Planta
-        const plantaA = a.planta || 0;
-        const plantaB = b.planta || 0;
-        if (plantaA !== plantaB) {
-          return plantaA - plantaB;
-        }
-
-        // 3. Si es la misma planta, ordena numéricamente por Repetición
-        const repA = a.repeticion || 0;
-        const repB = b.repeticion || 0;
-        return repA - repB;
-      });
-
-      // Reemplazamos los detalles originales por los ordenados
-      res.data.detalles = detallesOrdenados;
-
       setReporte(res.data);
 
       setGrafica({
+        // 4. Validación para evitar imprimir 'P:null'. Si es null, solo muestra la repetición.
         labels: res.data.detalles.map(d => d.planta ? `P:${d.planta} R:${d.repeticion}` : `R:${d.repeticion}`),
         datasets: [{
           label: `Valores de ${res.data.variable}`,
@@ -127,12 +96,12 @@ function KNN() {
           borderColor: res.data.detalles.map(d => d.es_anomalia ? "rgba(211, 47, 47, 1)" : "rgba(2, 119, 189, 1)"),
           borderWidth: 1,
           borderRadius: 4,
-          tension: 0.3 
+          tension: 0.3 // Da un efecto curvo si se usa el gráfico de líneas
         }]
       });
     } catch (error) {
       console.error("Detalle completo del error del servidor:", error.response?.data);
-      alert(error.response?.data?.error || "Error al conectar con el servidor para procesar modelos. Revisa la consola.");
+      alert(error.response?.data?.error || "Error al conectar con el servidor para procesar KNN. Revisa la consola.");
     } finally {
       setLoading(false);
     }
@@ -162,6 +131,7 @@ function KNN() {
       }
 
       return {
+        // 5. Ocultamos 'Planta null' del diagnóstico
         identificador: anom.planta ? `Planta ${anom.planta} (Repetición ${anom.repeticion})` : `Repetición ${anom.repeticion}`,
         tratamiento: anom.tratamiento,
         valor: anom.valor,
@@ -181,7 +151,7 @@ function KNN() {
 
     doc.setFontSize(18);
     doc.setTextColor(40);
-    doc.text("Reporte de Auditoría de Anomalías (Machine Learning)", 14, 22);
+    doc.text("Reporte de Auditoría de Anomalías (KNN/LOF)", 14, 22);
     
     doc.setFontSize(10);
     doc.text(`Fecha de generación: ${fecha}`, 14, 30);
@@ -195,6 +165,7 @@ function KNN() {
     doc.text(`Total Registros: ${reporte.total_analizado} | Anomalías: ${reporte.total_anomalias}`, 14, 62);
 
     const tableData = reporte.detalles.map(d => [
+      // 6. Ocultamos el nulo en la tabla del PDF
       d.planta ? `${d.planta} (R: ${d.repeticion})` : `R: ${d.repeticion}`,
       d.tratamiento,
       d.valor,
@@ -235,6 +206,7 @@ function KNN() {
     doc.save(`Reporte_Auditoria_${getNombreCultivo()}_${reporte.variable}.pdf`);
   };
 
+  // 7. Opciones de estilo compartidas para ambas gráficas (Barras y Líneas)
   const opcionesGrafica = { 
     responsive: true, 
     maintainAspectRatio: false, 
@@ -250,15 +222,20 @@ function KNN() {
         <div className="header-container">
           <h3>🔍 ANOMALIAS </h3>
           <p style={{ color: "#64748b", marginTop: "5px", marginBottom: 0 }}>
-            Análisis matemático multidimensional mediante modelos supervisados para la detección de incongruencias.
+            Análisis matemático multidimensional mediante vecinos más cercanos (KNN) para la detección de incongruencias.
           </p>
         </div>
 
         <div className="form-card">
           <div className="grid-filters">
+            
             <div className="filter-item">
               <label className="form-label">1. Cultivo:</label>
-              <select className="form-input" value={filtros.cultivoId} onChange={e => setFiltros({ cultivoId: e.target.value, loteId: "", anio: "", variable: "" })}>
+              <select 
+                className="form-input" 
+                value={filtros.cultivoId} 
+                onChange={e => setFiltros({ cultivoId: e.target.value, loteId: "", anio: "", variable: "" })}
+              >
                 <option value="">-- Seleccione Cultivo --</option>
                 {listas.cultivos.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
               </select>
@@ -266,7 +243,12 @@ function KNN() {
 
             <div className="filter-item">
               <label className="form-label">2. Lote/Unidad:</label>
-              <select className="form-input" value={filtros.loteId} disabled={!filtros.cultivoId} onChange={e => setFiltros({ ...filtros, loteId: e.target.value, anio: "", variable: "" })}>
+              <select 
+                className="form-input" 
+                value={filtros.loteId} 
+                disabled={!filtros.cultivoId}
+                onChange={e => setFiltros({ ...filtros, loteId: e.target.value, anio: "", variable: "" })}
+              >
                 <option value="">-- Seleccione Lote --</option>
                 {listas.lotes.map(l => <option key={l.id} value={l.id}>{l.nombre}</option>)}
               </select>
@@ -274,7 +256,12 @@ function KNN() {
 
             <div className="filter-item">
               <label className="form-label">3. Año:</label>
-              <select className="form-input" value={filtros.anio} disabled={!filtros.loteId} onChange={e => setFiltros({ ...filtros, anio: e.target.value, variable: "" })}>
+              <select 
+                className="form-input" 
+                value={filtros.anio} 
+                disabled={!filtros.loteId}
+                onChange={e => setFiltros({ ...filtros, anio: e.target.value, variable: "" })}
+              >
                 <option value="">-- Seleccione Año --</option>
                 {listas.anios.map((anio, i) => <option key={i} value={anio}>{anio}</option>)}
               </select>
@@ -282,7 +269,12 @@ function KNN() {
 
             <div className="filter-item">
               <label className="form-label">4. Variable:</label>
-              <select className="form-input" value={filtros.variable} disabled={!filtros.anio} onChange={e => setFiltros({ ...filtros, variable: e.target.value })}>
+              <select 
+                className="form-input" 
+                value={filtros.variable} 
+                disabled={!filtros.anio}
+                onChange={e => setFiltros({ ...filtros, variable: e.target.value })}
+              >
                 <option value="">-- Seleccione Variable --</option>
                 {listas.variables.map((v, i) => <option key={i} value={v.id}>{v.nombre}</option>)}
               </select>
@@ -313,48 +305,48 @@ function KNN() {
               </p>
             </div>
 
-            {reporte.metricas && reporte.metricas.KNN && (
+            {reporte.metricas && (
               <div className="form-card" style={{ marginTop: "20px", marginBottom: "20px" }}>
-                <h4 style={{ borderBottom: "2px solid #e2e8f0", paddingBottom: "10px", marginTop: 0 }}>
-                  🤖 Comparativa de Rendimiento (KNN vs Árboles vs SVM)
-                </h4>
+                <h4 style={{ borderBottom: "2px solid #e2e8f0", paddingBottom: "10px", marginTop: 0 }}>📊 Evaluación del Modelo (Validación Cruzada k-fold)</h4>
                 
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: "20px", marginTop: "15px" }}>
-                  
-                  {/* Tarjeta KNN */}
-                  <div style={{ padding: "15px", backgroundColor: "#f0f9ff", border: "1px solid #bae6fd", borderRadius: "8px" }}>
-                    <h5 style={{ margin: "0 0 12px 0", color: "#0369a1", textAlign: "center", fontSize:"15px" }}>K-Nearest Neighbors (KNN)</h5>
-                    <ul style={{ listStyle: "none", padding: 0, margin: 0, color: "#334155", fontSize: "14px" }}>
-                      <li style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}><span>Exactitud:</span> <strong>{reporte.metricas.KNN.accuracy}%</strong></li>
-                      <li style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}><span>Precisión:</span> <strong>{reporte.metricas.KNN.precision}%</strong></li>
-                      <li style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}><span>Sensibilidad:</span> <strong>{reporte.metricas.KNN.recall}%</strong></li>
-                      <li style={{ display: "flex", justifyContent: "space-between" }}><span>F1-Score:</span> <strong>{reporte.metricas.KNN.f1_score}%</strong></li>
-                    </ul>
+                <div style={{ display: "flex", gap: "15px", flexWrap: "wrap", marginTop: "15px" }}>
+                  <div style={{ flex: 1, minWidth: "120px", padding: "15px", backgroundColor: "#f8fafc", borderRadius: "8px", textAlign: "center", border: "1px solid #e2e8f0" }}>
+                    <span style={{ display: "block", fontSize: "0.9em", color: "#64748b" }}>Exactitud (Accuracy)</span>
+                    <strong style={{ fontSize: "1.5em", color: "#0f172a" }}>{reporte.metricas.accuracy}%</strong>
                   </div>
-
-                  {/* Tarjeta Árbol de Decisión */}
-                  <div style={{ padding: "15px", backgroundColor: "#fdf4ff", border: "1px solid #fbcfe8", borderRadius: "8px" }}>
-                    <h5 style={{ margin: "0 0 12px 0", color: "#be185d", textAlign: "center", fontSize:"15px" }}>Árbol de Decisión</h5>
-                    <ul style={{ listStyle: "none", padding: 0, margin: 0, color: "#334155", fontSize: "14px" }}>
-                      <li style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}><span>Exactitud:</span> <strong>{reporte.metricas.DecisionTree.accuracy}%</strong></li>
-                      <li style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}><span>Precisión:</span> <strong>{reporte.metricas.DecisionTree.precision}%</strong></li>
-                      <li style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}><span>Sensibilidad:</span> <strong>{reporte.metricas.DecisionTree.recall}%</strong></li>
-                      <li style={{ display: "flex", justifyContent: "space-between" }}><span>F1-Score:</span> <strong>{reporte.metricas.DecisionTree.f1_score}%</strong></li>
-                    </ul>
+                  <div style={{ flex: 1, minWidth: "120px", padding: "15px", backgroundColor: "#f8fafc", borderRadius: "8px", textAlign: "center", border: "1px solid #e2e8f0" }}>
+                    <span style={{ display: "block", fontSize: "0.9em", color: "#64748b" }}>Precisión</span>
+                    <strong style={{ fontSize: "1.5em", color: "#0f172a" }}>{reporte.metricas.precision}%</strong>
                   </div>
-
-                  {/* Tarjeta SVM */}
-                  <div style={{ padding: "15px", backgroundColor: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: "8px" }}>
-                    <h5 style={{ margin: "0 0 12px 0", color: "#15803d", textAlign: "center", fontSize:"15px" }}>Máquinas de Vectores de Soporte (SVM)</h5>
-                    <ul style={{ listStyle: "none", padding: 0, margin: 0, color: "#334155", fontSize: "14px" }}>
-                      <li style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}><span>Exactitud:</span> <strong>{reporte.metricas.SVM.accuracy}%</strong></li>
-                      <li style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}><span>Precisión:</span> <strong>{reporte.metricas.SVM.precision}%</strong></li>
-                      <li style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}><span>Sensibilidad:</span> <strong>{reporte.metricas.SVM.recall}%</strong></li>
-                      <li style={{ display: "flex", justifyContent: "space-between" }}><span>F1-Score:</span> <strong>{reporte.metricas.SVM.f1_score}%</strong></li>
-                    </ul>
+                  <div style={{ flex: 1, minWidth: "120px", padding: "15px", backgroundColor: "#f8fafc", borderRadius: "8px", textAlign: "center", border: "1px solid #e2e8f0" }}>
+                    <span style={{ display: "block", fontSize: "0.9em", color: "#64748b" }}>Sensibilidad (Recall)</span>
+                    <strong style={{ fontSize: "1.5em", color: "#0f172a" }}>{reporte.metricas.recall}%</strong>
                   </div>
-
+                  <div style={{ flex: 1, minWidth: "120px", padding: "15px", backgroundColor: "#f8fafc", borderRadius: "8px", textAlign: "center", border: "1px solid #e2e8f0" }}>
+                    <span style={{ display: "block", fontSize: "0.9em", color: "#64748b" }}>F1-Score</span>
+                    <strong style={{ fontSize: "1.5em", color: "#0f172a" }}>{reporte.metricas.f1_score}%</strong>
+                  </div>
                 </div>
+
+                {reporte.metricas.matriz_confusion && (
+                  <div style={{ marginTop: "20px" }}>
+                    <h5 style={{ color: "#475569", marginBottom: "10px" }}>Matriz de Confusión</h5>
+                    <table style={{ width: "100%", maxWidth: "300px", borderCollapse: "collapse", textAlign: "center" }}>
+                      <tbody>
+                        {reporte.metricas.matriz_confusion.map((fila, i) => (
+                          <tr key={i}>
+                            {fila.map((valor, j) => (
+                              <td key={j} style={{ border: "1px solid #cbd5e1", padding: "12px", backgroundColor: i === j ? "#f0fdf4" : "#fef2f2" }}>
+                                <strong style={{ color: i === j ? "#16a34a" : "#dc2626" }}>{valor}</strong>
+                              </td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    <small style={{ color: "#94a3b8", display: "block", marginTop: "5px" }}>* Las celdas en verde indican las predicciones correctas del algoritmo.</small>
+                  </div>
+                )}
               </div>
             )}
 
@@ -387,6 +379,7 @@ function KNN() {
                 <tbody>
                   {reporte.detalles.map((d, i) => (
                     <tr key={i} style={{ backgroundColor: d.es_anomalia ? "#fef2f2" : "transparent" }}>
+                      {/* 8. Validación para ocultar nulos en la tabla de resultados */}
                       <td>{d.planta ? `${d.planta} (R: ${d.repeticion})` : `Repetición ${d.repeticion}`}</td>
                       <td>{d.tratamiento}</td>
                       <td style={{ fontWeight: "bold" }}>{d.valor}</td>
@@ -400,6 +393,7 @@ function KNN() {
             </div>
 
             <div className="form-card">
+              {/* 9. Botones o selector para cambiar el tipo de gráfica dinámicamente */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
                 <h4 style={{ margin: 0, color: "#475569" }}>Representación Gráfica</h4>
                 <div>
