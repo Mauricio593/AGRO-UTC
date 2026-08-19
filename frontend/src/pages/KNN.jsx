@@ -8,7 +8,6 @@ import { Bar, Line, Scatter } from "react-chartjs-2";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
-// Se agregó ScatterController para el nuevo gráfico
 ChartJS.register(BarElement, CategoryScale, LinearScale, Tooltip, Legend, PointElement, LineElement, ScatterController);
 
 function KNN() {
@@ -118,12 +117,12 @@ function KNN() {
     }
   };
 
-  // NUEVA FUNCIÓN: Generar datos para el gráfico de demostración KNN
   const generarGraficoVecinos = () => {
     if (!reporte || !reporte.detalles || reporte.detalles.length === 0) return null;
     
     const datos = reporte.detalles;
-    const puntoPrueba = datos[0]; 
+    const indicePrueba = 0;
+    const puntoPrueba = datos[indicePrueba]; 
     
     const distancias = datos.map((d, i) => ({
       index: i,
@@ -131,33 +130,43 @@ function KNN() {
       dist: Math.abs(d.valor - puntoPrueba.valor)
     }));
     
-    const vecinos = distancias.filter(d => d.index !== 0).sort((a, b) => a.dist - b.dist).slice(0, 3);
+    const vecinos = distancias
+      .filter(d => d.index !== indicePrueba)
+      .sort((a, b) => a.dist - b.dist)
+      .slice(0, 3);
     
+    const lineasVecinos = vecinos.map((v, i) => ({
+      type: 'line',
+      label: `Conexión Vecino ${i + 1}`,
+      data: [
+        { x: indicePrueba, y: puntoPrueba.valor },
+        { x: v.index, y: v.valor }
+      ],
+      borderColor: "#ef4444",
+      borderWidth: 1.5,
+      borderDash: [5, 5],
+      showLine: true,
+      fill: false,
+      pointRadius: 0
+    }));
+
     return {
       datasets: [
-        {
-          type: 'line',
-          label: 'Conexión a Vecinos Cercanos',
-          data: vecinos.map(v => ({ x: v.index, y: v.valor })),
-          borderColor: "#dc2626",
-          borderWidth: 2,
-          showLine: true,
-          fill: false,
-          pointRadius: 0
-        },
+        ...lineasVecinos,
         {
           type: 'scatter',
           label: 'Registros Evaluados',
           data: datos.map((d, i) => ({ x: i, y: d.valor })),
           backgroundColor: "#0288d1",
-          pointRadius: 5
+          pointRadius: 6,
+          pointHoverRadius: 8
         },
         {
           type: 'scatter',
-          label: 'Punto de Prueba',
-          data: [{ x: 0, y: puntoPrueba.valor }],
+          label: 'Punto de Prueba (Seleccionado)',
+          data: [{ x: indicePrueba, y: puntoPrueba.valor }],
           backgroundColor: "#16a34a",
-          pointRadius: 8,
+          pointRadius: 9,
           pointStyle: 'rectRot'
         }
       ]
@@ -238,6 +247,11 @@ function KNN() {
       doc.setFont("helvetica", "bold");
       doc.text("2. Evaluación del Modelo Predictivo (Validación Cruzada k-fold)", 14, currentY);
       currentY += 7;
+
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "italic");
+      doc.text("La validación cruzada k-fold divide los datos en k grupos para iterar la detección y garantizar que los resultados sean confiables.", 14, currentY, { maxWidth: 180 });
+      currentY += 10;
       
       doc.setFontSize(11);
       doc.setFont("helvetica", "normal");
@@ -366,8 +380,45 @@ function KNN() {
     responsive: true, 
     maintainAspectRatio: false, 
     animation: { duration: 0 }, 
-    plugins: { legend: { display: false } },
-    scales: { y: { title: { display: true, text: `Escala (${reporte?.variable})`, font: { weight: 'bold' } } } }
+    plugins: { 
+      legend: { display: false },
+      datalabels: { display: false } 
+    },
+    scales: { 
+      x: {
+        ticks: { maxRotation: 45, minRotation: 0, autoSkip: true, maxTicksLimit: 15 }
+      },
+      y: { 
+        title: { display: true, text: `Escala (${reporte?.variable || ''})`, font: { weight: 'bold' } } 
+      } 
+    }
+  };
+
+  const opcionesScatter = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        display: true,
+        position: 'top',
+        labels: { filter: (item) => !item.text.includes('Conexión') }
+      },
+      tooltip: {
+        callbacks: { label: (context) => `Muestra #${context.parsed.x} | Valor: ${context.parsed.y}` }
+      },
+      datalabels: { display: false }
+    },
+    scales: {
+      x: {
+        type: 'linear',
+        title: { display: true, text: 'Índice de Secuencia', font: { weight: 'bold' } },
+        ticks: { precision: 0, stepSize: 1 }
+      },
+      y: {
+        type: 'linear',
+        title: { display: true, text: `Valor (${reporte?.variable || ''})`, font: { weight: 'bold' } }
+      }
+    }
   };
 
   return (
@@ -491,6 +542,18 @@ function KNN() {
                   </div>
                 </div>
 
+                {/* DETALLES DE MÉTRICAS */}
+                <div style={{ backgroundColor: "#f1f5f9", padding: "15px", borderRadius: "8px", marginTop: "20px", fontSize: "0.88em", color: "#334155" }}>
+                  <strong style={{ display: "block", marginBottom: "8px", color: "#0f172a" }}>ℹ️ Interpretación de Métricas del Modelo:</strong>
+                  <ul style={{ margin: 0, paddingLeft: "20px", lineHeight: "1.6" }}>
+                    <li><strong>Exactitud (Accuracy):</strong> Porcentaje general de predicciones correctas (anomalías y normales).</li>
+                    <li><strong>Precisión:</strong> De todas las muestras clasificadas como anomalías, la proporción que realmente correspondía a un dato atípico.</li>
+                    <li><strong>Sensibilidad (Recall):</strong> De todas las anomalías reales presentes en los datos, el porcentaje que el modelo logró detectar con éxito.</li>
+                    <li><strong>F1-Score:</strong> Media armónica entre la Precisión y la Sensibilidad, útil para equilibrar falsos positivos y falsos negativos.</li>
+                    <li><strong>Validación Cruzada k-fold:</strong> Método que divide el conjunto de datos en $k$ partes para probar recursivamente el algoritmo y asegurar que los resultados sean consistentes y no fruto del azar.</li>
+                  </ul>
+                </div>
+
                 {reporte.metricas.matriz_confusion && (
                   <div style={{ marginTop: "25px" }}>
                     <h5 style={{ color: "#475569", marginBottom: "12px" }}>Matriz de Confusión Detallada</h5>
@@ -611,7 +674,7 @@ function KNN() {
                 </div>
               </div>
 
-              <div className="chart-container" style={{ height: "400px", backgroundColor: "#fff" }}>
+              <div className="chart-container" style={{ height: "400px", backgroundColor: "#fff", position: "relative" }}>
                 {tipoGrafico === "bar" ? (
                   <Bar data={grafica} options={opcionesGrafica} />
                 ) : (
@@ -620,7 +683,6 @@ function KNN() {
               </div>
             </div>
 
-            {/* NUEVA SECCIÓN: Gráfico de Demostración KNN */}
             <div className="form-card" style={{ marginTop: "25px" }}>
               <h4 style={{ margin: "0 0 15px 0", color: "#475569" }}>
                 Demostración del Algoritmo: K-Vecinos Más Cercanos
@@ -628,10 +690,10 @@ function KNN() {
               <p style={{ fontSize: "14px", color: "#64748b", marginBottom: "15px" }}>
                 Visualización de cómo el algoritmo calcula la distancia entre el primer registro evaluado (Punto de Prueba) y sus 3 vecinos más cercanos matemáticamente.
               </p>
-              <div className="chart-container" style={{ height: "350px", backgroundColor: "#fff" }}>
+              <div className="chart-container" style={{ height: "350px", backgroundColor: "#fff", position: "relative" }}>
                 {reporte && <Scatter 
                   data={generarGraficoVecinos()} 
-                  options={{ responsive: true, maintainAspectRatio: false }} 
+                  options={opcionesScatter} 
                 />}
               </div>
             </div>
