@@ -125,31 +125,28 @@ USE_TZ = True
 STATIC_URL = 'static/'
 
 STATIC_ROOT = BASE_DIR / 'staticfiles'
-# CONFIGURACIÓN DE CORS
-CORS_ALLOWED_ORIGINS = [
+# STATIC_ROOT = BASE_DIR / 'staticfiles'  (Mantén esta línea que ya tienes)
 
+# --- CONFIGURACIÓN DE CORS ---
+CORS_ALLOWED_ORIGINS = [
     "http://localhost:5174", 
     "http://127.0.0.1:5174", 
     "https://agro-utc.vercel.app",
 ]
 
-# Muy importante: añade esto para permitir el envío de tokens
+# Permitir el envío de credenciales y tokens JWT
 CORS_ALLOW_CREDENTIALS = True
+
+# --- CONFIGURACIÓN DE REST FRAMEWORK Y TOKENS ---
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
 }
-# Permitir que el frontend envíe credenciales y tokens
-CORS_ALLOW_CREDENTIALS = True
-
-# Opcional: Si sigues teniendo problemas con localhost:3000, 
-# puedes permitir todos los orígenes temporalmente para probar:
-CORS_ALLOW_ALL_ORIGINS = True
 
 from datetime import timedelta
 
-# Configuración para que el token dure 1 día entero
+# Configuración de duración de los tokens
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(days=1),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
