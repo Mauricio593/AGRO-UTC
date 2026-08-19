@@ -3,12 +3,13 @@ import API from "../services/api";
 import Navbar from "../components/Navbar";
 import "./KNN.css"; 
 
-import { Chart as ChartJS, BarElement, CategoryScale, LinearScale, Tooltip, Legend, PointElement, LineElement } from "chart.js";
-import { Bar, Line } from "react-chartjs-2";
+import { Chart as ChartJS, BarElement, CategoryScale, LinearScale, Tooltip, Legend, PointElement, LineElement, ScatterController } from "chart.js";
+import { Bar, Line, Scatter } from "react-chartjs-2";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
-ChartJS.register(BarElement, CategoryScale, LinearScale, Tooltip, Legend, PointElement, LineElement);
+// Se agregó ScatterController para el nuevo gráfico
+ChartJS.register(BarElement, CategoryScale, LinearScale, Tooltip, Legend, PointElement, LineElement, ScatterController);
 
 function KNN() {
   const [filtros, setFiltros] = useState({ cultivoId: "", loteId: "", anio: "", variable: "" });
@@ -117,6 +118,52 @@ function KNN() {
     }
   };
 
+  // NUEVA FUNCIÓN: Generar datos para el gráfico de demostración KNN
+  const generarGraficoVecinos = () => {
+    if (!reporte || !reporte.detalles || reporte.detalles.length === 0) return null;
+    
+    const datos = reporte.detalles;
+    const puntoPrueba = datos[0]; 
+    
+    const distancias = datos.map((d, i) => ({
+      index: i,
+      valor: d.valor,
+      dist: Math.abs(d.valor - puntoPrueba.valor)
+    }));
+    
+    const vecinos = distancias.filter(d => d.index !== 0).sort((a, b) => a.dist - b.dist).slice(0, 3);
+    
+    return {
+      datasets: [
+        {
+          type: 'line',
+          label: 'Conexión a Vecinos Cercanos',
+          data: vecinos.map(v => ({ x: v.index, y: v.valor })),
+          borderColor: "#dc2626",
+          borderWidth: 2,
+          showLine: true,
+          fill: false,
+          pointRadius: 0
+        },
+        {
+          type: 'scatter',
+          label: 'Registros Evaluados',
+          data: datos.map((d, i) => ({ x: i, y: d.valor })),
+          backgroundColor: "#0288d1",
+          pointRadius: 5
+        },
+        {
+          type: 'scatter',
+          label: 'Punto de Prueba',
+          data: [{ x: 0, y: puntoPrueba.valor }],
+          backgroundColor: "#16a34a",
+          pointRadius: 8,
+          pointStyle: 'rectRot'
+        }
+      ]
+    };
+  };
+
   const procesarDetalleAnomalias = () => {
     if (!reporte || !reporte.detalles) return [];
     
@@ -158,7 +205,6 @@ function KNN() {
     const doc = new jsPDF();
     const fecha = new Date().toLocaleDateString();
 
-    // 1. Diseño del Encabezado Mejorado
     doc.setFillColor(2, 119, 189); 
     doc.rect(0, 0, 210, 25, 'F'); 
     doc.setTextColor(255, 255, 255); 
@@ -173,7 +219,6 @@ function KNN() {
     let currentY = 35; 
     doc.setTextColor(40, 40, 40); 
 
-    // 2. Sección: Resumen General
     doc.setFontSize(14);
     doc.setFont("helvetica", "bold");
     doc.text("1. Resumen del Análisis", 14, currentY);
@@ -188,11 +233,10 @@ function KNN() {
     doc.text(`Total Registros: ${reporte.total_analizado} | Anomalías Detectadas: ${reporte.total_anomalias}`, 14, currentY);
     currentY += 12;
 
-    // 3. Sección: Métricas del Modelo 
     if (reporte.metricas) {
       doc.setFontSize(14);
       doc.setFont("helvetica", "bold");
-      doc.text("2. Evaluación del Modelo Predictivo", 14, currentY);
+      doc.text("2. Evaluación del Modelo Predictivo (Validación Cruzada k-fold)", 14, currentY);
       currentY += 7;
       
       doc.setFontSize(11);
@@ -202,11 +246,39 @@ function KNN() {
       currentY += 6;
       doc.text(`Sensibilidad (Recall): ${reporte.metricas.recall}%`, 14, currentY);
       doc.text(`F1-Score: ${reporte.metricas.f1_score}%`, 110, currentY);
-      currentY += 12;
+      currentY += 10;
+
+      if (reporte.metricas.matriz_confusion) {
+        doc.setFontSize(11);
+        doc.setFont("helvetica", "bold");
+        doc.text("Matriz de Confusión Detallada:", 14, currentY);
+        currentY += 4;
+
+        const mc = reporte.metricas.matriz_confusion;
+        autoTable(doc, {
+          startY: currentY,
+          head: [['', 'Predicción: Anomalía', 'Predicción: Normal']],
+          body: [
+            ['Real: Anomalía', `${mc[0][0]} (Verdaderos Positivos)`, `${mc[0][1]} (Falsos Negativos)`],
+            ['Real: Normal', `${mc[1][0]} (Falsos Positivos)`, `${mc[1][1]} (Verdaderos Negativos)`]
+          ],
+          theme: 'grid',
+          styles: { fontSize: 9, halign: 'center' },
+          headStyles: { fillColor: [2, 119, 189], textColor: [255, 255, 255], fontStyle: 'bold' },
+          columnStyles: { 0: { fontStyle: 'bold', halign: 'left', fillColor: [241, 245, 249] } },
+          margin: { left: 14, right: 40 }
+        });
+
+        currentY = doc.lastAutoTable.finalY + 10;
+      }
     }
 
-    // 4. Sección: Conclusiones y Diagnóstico (Con corrección de emojis)
     if (listaAnomaliasDetalladas.length > 0) {
+      if (currentY > 240) {
+        doc.addPage();
+        currentY = 20;
+      }
+
       doc.setFontSize(14);
       doc.setFont("helvetica", "bold");
       doc.text("3. Diagnóstico Técnico de Anomalías", 14, currentY);
@@ -216,7 +288,6 @@ function KNN() {
       doc.setFont("helvetica", "normal");
       
       listaAnomaliasDetalladas.forEach(item => {
-        // Limpiamos los emojis antes de pasarlos a jsPDF
         let conclusionLimpia = item.conclusion
           .replace(/⚠️/g, '[ALERTA]')
           .replace(/🌱/g, '[NOTA BIOLÓGICA]');
@@ -235,8 +306,7 @@ function KNN() {
       currentY += 8;
     }
 
-    // 5. Sección: Tabla de Detalles
-    if (currentY > 260) {
+    if (currentY > 240) {
       doc.addPage();
       currentY = 20;
     }
@@ -270,7 +340,6 @@ function KNN() {
       }
     });
 
-    // 6. Sección: Gráfico en una hoja nueva (Alta Nitidez)
     const canvas = document.querySelector('canvas');
     if (canvas) {
       doc.addPage(); 
@@ -285,7 +354,6 @@ function KNN() {
       doc.addImage(imgData, 'PNG', 15, 30, pdfWidth, pdfHeight);
     }
 
-    // 7. Decidir si previsualizar o descargar
     if (modoPreview) {
       const pdfBlobUrl = doc.output('bloburl');
       window.open(pdfBlobUrl, '_blank');
@@ -529,7 +597,7 @@ function KNN() {
 
             <div className="form-card">
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
-                <h4 style={{ margin: 0, color: "#475569" }}>Representación Gráfica</h4>
+                <h4 style={{ margin: 0, color: "#475569" }}>Representación Gráfica General</h4>
                 <div>
                   <label style={{ marginRight: '10px', fontSize: '14px', fontWeight: 'bold', color: '#64748b' }}>Visualización:</label>
                   <select 
@@ -549,6 +617,22 @@ function KNN() {
                 ) : (
                   <Line data={grafica} options={opcionesGrafica} />
                 )}
+              </div>
+            </div>
+
+            {/* NUEVA SECCIÓN: Gráfico de Demostración KNN */}
+            <div className="form-card" style={{ marginTop: "25px" }}>
+              <h4 style={{ margin: "0 0 15px 0", color: "#475569" }}>
+                Demostración del Algoritmo: K-Vecinos Más Cercanos
+              </h4>
+              <p style={{ fontSize: "14px", color: "#64748b", marginBottom: "15px" }}>
+                Visualización de cómo el algoritmo calcula la distancia entre el primer registro evaluado (Punto de Prueba) y sus 3 vecinos más cercanos matemáticamente.
+              </p>
+              <div className="chart-container" style={{ height: "350px", backgroundColor: "#fff" }}>
+                {reporte && <Scatter 
+                  data={generarGraficoVecinos()} 
+                  options={{ responsive: true, maintainAspectRatio: false }} 
+                />}
               </div>
             </div>
             
