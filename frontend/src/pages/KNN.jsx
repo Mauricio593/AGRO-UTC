@@ -216,7 +216,7 @@ function KNN() {
       }
     }
 
-    doc.save(`Reporte_Auditoria_${getNombreCultivo()}_${reporte.variable}.pdf`);
+    doc.save(`Reporte-de-anomalias_${getNombreCultivo()}_${reporte.variable}.pdf`);
   };
 
   const opcionesGrafica = { 
@@ -317,51 +317,107 @@ function KNN() {
               </p>
             </div>
 
-            {reporte.metricas && (
-              <div className="form-card" style={{ marginTop: "20px", marginBottom: "20px" }}>
-                <h4 style={{ borderBottom: "2px solid #e2e8f0", paddingBottom: "10px", marginTop: 0 }}>📊 Evaluación del Modelo (Validación Cruzada k-fold)</h4>
-                
-                <div style={{ display: "flex", gap: "15px", flexWrap: "wrap", marginTop: "15px" }}>
-                  <div style={{ flex: 1, minWidth: "120px", padding: "15px", backgroundColor: "#f8fafc", borderRadius: "8px", textAlign: "center", border: "1px solid #e2e8f0" }}>
-                    <span style={{ display: "block", fontSize: "0.9em", color: "#64748b" }}>Exactitud (Accuracy)</span>
-                    <strong style={{ fontSize: "1.5em", color: "#0f172a" }}>{reporte.metricas.accuracy}%</strong>
-                  </div>
-                  <div style={{ flex: 1, minWidth: "120px", padding: "15px", backgroundColor: "#f8fafc", borderRadius: "8px", textAlign: "center", border: "1px solid #e2e8f0" }}>
-                    <span style={{ display: "block", fontSize: "0.9em", color: "#64748b" }}>Precisión</span>
-                    <strong style={{ fontSize: "1.5em", color: "#0f172a" }}>{reporte.metricas.precision}%</strong>
-                  </div>
-                  <div style={{ flex: 1, minWidth: "120px", padding: "15px", backgroundColor: "#f8fafc", borderRadius: "8px", textAlign: "center", border: "1px solid #e2e8f0" }}>
-                    <span style={{ display: "block", fontSize: "0.9em", color: "#64748b" }}>Sensibilidad (Recall)</span>
-                    <strong style={{ fontSize: "1.5em", color: "#0f172a" }}>{reporte.metricas.recall}%</strong>
-                  </div>
-                  <div style={{ flex: 1, minWidth: "120px", padding: "15px", backgroundColor: "#f8fafc", borderRadius: "8px", textAlign: "center", border: "1px solid #e2e8f0" }}>
-                    <span style={{ display: "block", fontSize: "0.9em", color: "#64748b" }}>F1-Score</span>
-                    <strong style={{ fontSize: "1.5em", color: "#0f172a" }}>{reporte.metricas.f1_score}%</strong>
-                  </div>
-                </div>
+                  {reporte.metricas && (
+        <div className="form-card" style={{ marginTop: "20px", marginBottom: "20px" }}>
+          <h4 style={{ borderBottom: "2px solid #e2e8f0", paddingBottom: "10px", marginTop: 0 }}>
+            📊 Evaluación del Modelo (Validación Cruzada k-fold)
+          </h4>
+          
+          {/* Tarjetas Informativas de Métricas con Explicación Integrada */}
+          <div style={{ display: "flex", gap: "15px", flexWrap: "wrap", marginTop: "15px" }}>
+            <div style={{ flex: 1, minWidth: "140px", padding: "15px", backgroundColor: "#f8fafc", borderRadius: "8px", textAlign: "center", border: "1px solid #e2e8f0" }}>
+              <span style={{ display: "block", fontSize: "0.9em", color: "#64748b", fontWeight: "600" }}>Exactitud (Accuracy)</span>
+              <strong style={{ fontSize: "1.6em", color: "#0f172a", display: "block", margin: "5px 0" }}>{reporte.metricas.accuracy}%</strong>
+              <small style={{ fontSize: "0.75em", color: "#64748b" }}>Porcentaje total de clasificaciones correctas (Normales y Anomalías).</small>
+            </div>
 
-                {reporte.metricas.matriz_confusion && (
-                  <div style={{ marginTop: "20px" }}>
-                    <h5 style={{ color: "#475569", marginBottom: "10px" }}>Matriz de Confusión</h5>
-                    <table style={{ width: "100%", maxWidth: "300px", borderCollapse: "collapse", textAlign: "center" }}>
-                      <tbody>
-                        {reporte.metricas.matriz_confusion.map((fila, i) => (
-                          <tr key={i}>
-                            {fila.map((valor, j) => (
-                              <td key={j} style={{ border: "1px solid #cbd5e1", padding: "12px", backgroundColor: i === j ? "#f0fdf4" : "#fef2f2" }}>
-                                <strong style={{ color: i === j ? "#16a34a" : "#dc2626" }}>{valor}</strong>
-                              </td>
-                            ))}
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                    <small style={{ color: "#94a3b8", display: "block", marginTop: "5px" }}>* Las celdas en verde indican las predicciones correctas del algoritmo.</small>
-                  </div>
-                )}
+            <div style={{ flex: 1, minWidth: "140px", padding: "15px", backgroundColor: "#f8fafc", borderRadius: "8px", textAlign: "center", border: "1px solid #e2e8f0" }}>
+              <span style={{ display: "block", fontSize: "0.9em", color: "#64748b", fontWeight: "600" }}>Precisión</span>
+              <strong style={{ fontSize: "1.6em", color: "#0f172a", display: "block", margin: "5px 0" }}>{reporte.metricas.precision}%</strong>
+              <small style={{ fontSize: "0.75em", color: "#64748b" }}>De los registros marcados como anomalía, cuántos lo eran verdaderamente.</small>
+            </div>
+
+            <div style={{ flex: 1, minWidth: "140px", padding: "15px", backgroundColor: "#f8fafc", borderRadius: "8px", textAlign: "center", border: "1px solid #e2e8f0" }}>
+              <span style={{ display: "block", fontSize: "0.9em", color: "#64748b", fontWeight: "600" }}>Sensibilidad (Recall)</span>
+              <strong style={{ fontSize: "1.6em", color: "#0f172a", display: "block", margin: "5px 0" }}>{reporte.metricas.recall}%</strong>
+              <small style={{ fontSize: "0.75em", color: "#64748b" }}>Capacidad del algoritmo para detectar todas las anomalías reales existentes.</small>
+            </div>
+
+            <div style={{ flex: 1, minWidth: "140px", padding: "15px", backgroundColor: "#f8fafc", borderRadius: "8px", textAlign: "center", border: "1px solid #e2e8f0" }}>
+              <span style={{ display: "block", fontSize: "0.9em", color: "#64748b", fontWeight: "600" }}>F1-Score</span>
+              <strong style={{ fontSize: "1.6em", color: "#0f172a", display: "block", margin: "5px 0" }}>{reporte.metricas.f1_score}%</strong>
+              <small style={{ fontSize: "0.75em", color: "#64748b" }}>Balance armónico entre la Precisión y la Sensibilidad del modelo.</small>
+            </div>
+          </div>
+
+          {/* Matriz de Confusión Estructurada con Ejes */}
+          {reporte.metricas.matriz_confusion && (
+            <div style={{ marginTop: "25px" }}>
+              <h5 style={{ color: "#475569", marginBottom: "12px" }}>Matriz de Confusión Detallada</h5>
+              
+              <div style={{ overflowX: "auto" }}>
+                <table style={{ width: "100%", maxWidth: "480px", borderCollapse: "collapse", textAlign: "center", fontSize: "13px" }}>
+                  <thead>
+                    <tr>
+                      <th colSpan="2" rowSpan="2" style={{ border: "none", backgroundColor: "transparent" }}></th>
+                      <th colSpan="2" style={{ backgroundColor: "#0277bd", color: "white", padding: "6px", borderRadius: "4px 4px 0 0" }}>
+                        Predicción del Algoritmo
+                      </th>
+                    </tr>
+                    <tr>
+                      <th style={{ backgroundColor: "#e2e8f0", color: "#334155", padding: "8px", width: "35%" }}>Anomalía</th>
+                      <th style={{ backgroundColor: "#e2e8f0", color: "#334155", padding: "8px", width: "35%" }}>Normal</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td rowSpan="2" style={{ backgroundColor: "#475569", color: "white", fontWeight: "bold", writingMode: "vertical-lr", transform: "rotate(180deg)", padding: "10px", borderRadius: "4px 0 0 4px" }}>
+                        Valor Real
+                      </td>
+                      <td style={{ backgroundColor: "#f1f5f9", fontWeight: "bold", color: "#334155", padding: "10px" }}>
+                        Anomalía
+                      </td>
+                      <td style={{ border: "1px solid #cbd5e1", padding: "10px", backgroundColor: "#f0fdf4" }}>
+                        <strong style={{ color: "#16a34a", fontSize: "1.2em", display: "block" }}>
+                          {reporte.metricas.matriz_confusion[0][0]}
+                        </strong>
+                        <span style={{ fontSize: "10px", color: "#15803d" }}>Verdaderos Positivos</span>
+                      </td>
+                      <td style={{ border: "1px solid #cbd5e1", padding: "10px", backgroundColor: "#fef2f2" }}>
+                        <strong style={{ color: "#dc2626", fontSize: "1.2em", display: "block" }}>
+                          {reporte.metricas.matriz_confusion[0][1]}
+                        </strong>
+                        <span style={{ fontSize: "10px", color: "#b91c1c" }}>Falsos Negativos</span>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style={{ backgroundColor: "#f1f5f9", fontWeight: "bold", color: "#334155", padding: "10px" }}>
+                        Normal
+                      </td>
+                      <td style={{ border: "1px solid #cbd5e1", padding: "10px", backgroundColor: "#fef2f2" }}>
+                        <strong style={{ color: "#dc2626", fontSize: "1.2em", display: "block" }}>
+                          {reporte.metricas.matriz_confusion[1][0]}
+                        </strong>
+                        <span style={{ fontSize: "10px", color: "#b91c1c" }}>Falsos Positivos</span>
+                      </td>
+                      <td style={{ border: "1px solid #cbd5e1", padding: "10px", backgroundColor: "#f0fdf4" }}>
+                        <strong style={{ color: "#16a34a", fontSize: "1.2em", display: "block" }}>
+                          {reporte.metricas.matriz_confusion[1][1]}
+                        </strong>
+                        <span style={{ fontSize: "10px", color: "#15803d" }}>Verdaderos Negativos</span>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
               </div>
-            )}
-
+              
+              <small style={{ color: "#64748b", display: "block", marginTop: "10px" }}>
+                * Las celdas verdes muestran clasificaciones acertadas. Las celdas rojas representan errores de diagnóstico del modelo.
+              </small>
+            </div>
+          )}
+        </div>
+)}
             {listaAnomaliasDetalladas.length > 0 && (
               <div className="anomaly-diagnostic-panel">
                 <div className="diagnostic-card">
