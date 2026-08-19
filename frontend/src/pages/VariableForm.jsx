@@ -14,6 +14,7 @@ function VariableForm({
   const [tratamiento, setTratamiento] = useState("");
   const [errorTratamiento, setErrorTratamiento] = useState("");
   
+  // Estado para manejar los mensajes de éxito y error en la interfaz
   const [mensajeSistema, setMensajeSistema] = useState({ texto: "", tipo: "" });
   
   const [plantas, setPlantas] = useState([
@@ -35,6 +36,7 @@ function VariableForm({
   const [textoExcelDirecto, setTextoExcelDirecto] = useState("");
   const [cargandoDirecto, setCargandoDirecto] = useState(false);
 
+  // Función para mostrar mensajes y ocultarlos automáticamente
   const mostrarMensaje = (texto, tipo = "error") => {
     setMensajeSistema({ texto, tipo });
     setTimeout(() => {
@@ -45,13 +47,36 @@ function VariableForm({
   const cargarDatos = async () => {
     try {
       const resValores = await axios.get("https://agro-utc.onrender.com/api/valores/", getAuthHeaders());
-      const datosFiltrados = resValores.data
-        .filter(item => item.variable === parseInt(varId) && item.experimento === parseInt(expId))
-        .reverse(); 
+      const resTratamientos = await axios.get("https://agro-utc.onrender.com/api/tratamientos/", getAuthHeaders());
+
+      // 1. Ordenar los Tratamientos de forma alfanumérica (Ej. T1, T2, T10)
+      const tratamientosData = resTratamientos.data;
+      tratamientosData.sort((a, b) => 
+        a.nombre.localeCompare(b.nombre, undefined, { numeric: true, sensitivity: 'base' })
+      );
+      setListaTratamientos(tratamientosData);
+
+      // 2. Filtrar los valores correspondientes a este experimento y variable
+      const datosFiltrados = resValores.data.filter(
+        item => item.variable === parseInt(varId) && item.experimento === parseInt(expId)
+      );
+
+      // 3. Ordenar los Valores: Primero por Tratamiento (alfabético), luego por Repetición (numérico)
+      datosFiltrados.sort((a, b) => {
+        const tratA = tratamientosData.find(t => t.id === a.tratamiento)?.nombre || "";
+        const tratB = tratamientosData.find(t => t.id === b.tratamiento)?.nombre || "";
+        
+        const comparacionTratamiento = tratA.localeCompare(tratB, undefined, { numeric: true, sensitivity: 'base' });
+        
+        if (comparacionTratamiento === 0) {
+          return a.repeticion - b.repeticion;
+        }
+        return comparacionTratamiento;
+      });
+
+      // 4. Guardar los datos ordenados en el estado
       setListaValores(datosFiltrados);
 
-      const resTratamientos = await axios.get("https://agro-utc.onrender.com/api/tratamientos/", getAuthHeaders());
-      setListaTratamientos(resTratamientos.data);
     } catch (error) {
       console.error("Error al cargar los datos:", error);
     }
@@ -297,6 +322,7 @@ function VariableForm({
     }
   };
 
+  // RESTRICCIÓN DE ELIMINACIÓN POR ROL DE USUARIO
   const eliminarDato = async (id) => {
     const rolUsuario = (localStorage.getItem("rol") || localStorage.getItem("role") || "").toLowerCase();
 
@@ -335,10 +361,13 @@ function VariableForm({
     <div style={{ backgroundColor: "#fff", padding: "20px", borderRadius: "8px", boxShadow: "0 2px 8px rgba(0,0,0,0.1)" }}>
       <h3 style={{ color: "#0277bd", marginTop: 0, borderBottom: "2px solid #eee", paddingBottom: "10px" }}>📊 Registro de Mediciones - Promedios In Vitro</h3>
 
-      {/* MENSAJES DEL SISTEMA */}
       {mensajeSistema.texto && (
         <div style={{
-          padding: "12px", marginBottom: "20px", borderRadius: "6px", fontWeight: "bold", textAlign: "center",
+          padding: "12px",
+          marginBottom: "20px",
+          borderRadius: "6px",
+          fontWeight: "bold",
+          textAlign: "center",
           backgroundColor: mensajeSistema.tipo === "error" ? "#ffebee" : "#e8f5e9",
           color: mensajeSistema.tipo === "error" ? "#c62828" : "#2e7d32",
           border: `1px solid ${mensajeSistema.tipo === "error" ? "#ef9a9a" : "#a5d6a7"}`
@@ -349,14 +378,30 @@ function VariableForm({
 
       {/* FORMULARIO MANUAL */}
       <div style={{ backgroundColor: "#f8f9fa", padding: "15px", borderRadius: "8px", border: "1px solid #e0e0e0", marginBottom: "20px", overflowX: "auto" }}>
+        
         <div style={{ marginBottom: "15px", width: "300px" }}>
           <label style={{ display: "block", color: "#0277bd", fontWeight: "bold", fontSize: "14px", marginBottom: "5px" }}>Tratamiento (Ej. T1):</label>
           <input 
-            type="text" value={tratamiento} maxLength={12} onChange={handleTratamientoChange} list="trat-list" 
-            style={{ width: "100%", padding: "8px", borderRadius: "4px", border: errorTratamiento ? "2px solid #d32f2f" : "1px solid #ccc", outline: "none" }} 
+            type="text" 
+            value={tratamiento} 
+            maxLength={12}
+            onChange={handleTratamientoChange} 
+            list="trat-list" 
+            style={{ 
+              width: "100%", 
+              padding: "8px", 
+              borderRadius: "4px", 
+              border: errorTratamiento ? "2px solid #d32f2f" : "1px solid #ccc", 
+              outline: "none"
+            }} 
           />
           <datalist id="trat-list">{listaTratamientos.map(t => <option key={t.id} value={t.nombre} />)}</datalist>
-          {errorTratamiento && <span style={{ color: "#d32f2f", fontSize: "12px", marginTop: "4px", display: "block", fontWeight: "500" }}>{errorTratamiento}</span>}
+          
+          {errorTratamiento && (
+            <span style={{ color: "#d32f2f", fontSize: "12px", marginTop: "4px", display: "block", fontWeight: "500" }}>
+              {errorTratamiento}
+            </span>
+          )}
           <small style={{ color: "#666", fontSize: "11px", display: "block", marginTop: "3px" }}>Máximo 12 caracteres.</small>
         </div>
 
@@ -388,12 +433,13 @@ function VariableForm({
             </tr>
           </tbody>
         </table>
+        
         <div style={{ marginTop: "10px" }}>
           <button onClick={agregarPlanta} style={{ padding: "6px 12px", backgroundColor: "#eceff1", color: "#455a64", border: "1px solid #cfd8dc", borderRadius: "4px", cursor: "pointer", fontSize: "12px" }}>+ Agregar otra Planta</button>
         </div>
       </div>
 
-      {/* SECCIÓN PEGAR DESDE EXCEL MATRICIAL */}
+      {/* SECCIÓN PEGAR DESDE EXCEL */}
       {mostrarPegar && (
         <div style={{ marginBottom: "20px", padding: "15px", backgroundColor: "#f9f9f9", borderRadius: "6px", border: "1px dashed #0288d1" }}>
           <label style={{ display: "block", color: "#0288d1", fontWeight: "bold", fontSize: "14px", marginBottom: "5px" }}>
@@ -421,7 +467,26 @@ function VariableForm({
         </div>
       )}
 
-      {/* SECCIÓN PEGAR DATOS DIRECTOS */}
+      {/* BOTONERA PRINCIPAL */}
+      <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end", flexWrap: "wrap", marginBottom: "30px" }}>
+        <button onClick={() => setMostrarPegar(!mostrarPegar)} style={{ padding: "8px 16px", backgroundColor: "#e0f2f1", color: "#004d40", border: "1px solid #004d40", borderRadius: "4px", cursor: "pointer", fontWeight: "bold" }}>
+          📋 Importar Matriz Excel
+        </button>
+        <button onClick={guardarDatosPromediados} disabled={cargando} style={{ padding: "8px 16px", backgroundColor: "#2e7d32", color: "#fff", border: "none", borderRadius: "4px", cursor: "pointer", fontWeight: "bold" }}>
+          {cargando ? "Guardando..." : "Guardar Formulario"}
+        </button>
+        <button onClick={limpiarCampos} style={{ padding: "8px 16px", backgroundColor: "#757575", color: "#fff", border: "none", borderRadius: "4px", cursor: "pointer", fontWeight: "bold" }}>Limpiar</button>
+        <button onClick={() => setMostrarAnalisis(!mostrarAnalisis)} style={{ padding: "8px 16px", backgroundColor: "#0288d1", color: "#fff", border: "none", borderRadius: "4px", cursor: "pointer", fontWeight: "bold" }}>📊 Ver Análisis</button>
+      </div>
+
+      {/* ENCABEZADO Y REGISTROS DIRECTOS */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid #eee", paddingBottom: "10px", marginBottom: "15px" }}>
+        <h4 style={{ color: "#424242", margin: 0 }}>Registros en Base de Datos</h4>
+        <button onClick={() => setMostrarPegarDirecto(!mostrarPegarDirecto)} style={{ padding: "6px 12px", backgroundColor: "#00897b", color: "#fff", border: "none", borderRadius: "4px", cursor: "pointer", fontSize: "13px", fontWeight: "bold" }}>
+          📋 Pegar Datos Directos
+        </button>
+      </div>
+
       {mostrarPegarDirecto && (
         <div style={{ marginBottom: "15px", padding: "15px", backgroundColor: "#e0f2f1", borderRadius: "6px", border: "1px dashed #00897b" }}>
           <label style={{ display: "block", color: "#00695c", fontWeight: "bold", fontSize: "14px", marginBottom: "5px" }}>
@@ -449,70 +514,47 @@ function VariableForm({
         </div>
       )}
 
-      {/* BOTONERA PRINCIPAL */}
-      <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end", flexWrap: "wrap", marginBottom: "20px", paddingBottom: "20px", borderBottom: "2px solid #eee" }}>
-        <button onClick={() => setMostrarPegar(!mostrarPegar)} style={{ padding: "8px 16px", backgroundColor: "#e0f2f1", color: "#004d40", border: "1px solid #004d40", borderRadius: "4px", cursor: "pointer", fontWeight: "bold" }}>📋 Importar Matriz Excel</button>
-        <button onClick={() => setMostrarPegarDirecto(!mostrarPegarDirecto)} style={{ padding: "8px 16px", backgroundColor: "#00897b", color: "#fff", border: "none", borderRadius: "4px", cursor: "pointer", fontWeight: "bold" }}>📋 Pegar Datos Directos</button>
-        <button onClick={guardarDatosPromediados} disabled={cargando} style={{ padding: "8px 16px", backgroundColor: "#2e7d32", color: "#fff", border: "none", borderRadius: "4px", cursor: "pointer", fontWeight: "bold" }}>{cargando ? "Guardando..." : "Guardar Formulario"}</button>
-        <button onClick={limpiarCampos} style={{ padding: "8px 16px", backgroundColor: "#757575", color: "#fff", border: "none", borderRadius: "4px", cursor: "pointer", fontWeight: "bold" }}>Limpiar</button>
-        <button onClick={() => setMostrarAnalisis(!mostrarAnalisis)} style={{ padding: "8px 16px", backgroundColor: "#0288d1", color: "#fff", border: "none", borderRadius: "4px", cursor: "pointer", fontWeight: "bold" }}>📊 Ver Análisis</button>
+      {/* TABLA DE BASE DE DATOS */}
+      <div style={{ maxHeight: "250px", overflowY: "auto", border: "1px solid #ddd", borderRadius: "8px" }}>
+        <table className="sql-table" style={{ margin: 0, width: "100%", borderCollapse: "collapse" }}>
+          <thead style={{ position: "sticky", top: 0, backgroundColor: "#f4f7f6", zIndex: 1 }}>
+            <tr>
+              <th style={{padding: "10px", borderBottom: "2px solid #ddd", textAlign: "left"}}>Tratamiento</th>
+              <th style={{padding: "10px", borderBottom: "2px solid #ddd", textAlign: "left"}}>Repetición (R)</th>
+              <th style={{padding: "10px", borderBottom: "2px solid #ddd", textAlign: "left"}}>Valor (Promedio)</th>
+              <th style={{padding: "10px", borderBottom: "2px solid #ddd", textAlign: "center"}}>Acción</th>
+            </tr>
+          </thead>
+          <tbody>
+            {listaValores.map((dato) => (
+              <tr key={dato.id} style={{ backgroundColor: "transparent" }}>
+                <td style={{padding: "10px", borderBottom: "1px solid #eee"}}>{obtenerNombreTratamiento(dato.tratamiento)}</td>
+                <td style={{padding: "10px", borderBottom: "1px solid #eee"}}>R{dato.repeticion}</td>
+                <td style={{padding: "10px", borderBottom: "1px solid #eee", fontWeight: "bold"}}>{dato.valor}</td>
+                <td style={{padding: "10px", borderBottom: "1px solid #eee", textAlign: "center"}}>
+                  <button onClick={() => eliminarDato(dato.id)} style={{ padding: "4px 8px", backgroundColor: "#ffebee", color: "#c62828", border: "1px solid #ffcdd2", borderRadius: "4px", cursor: "pointer", fontSize: "12px" }}>Eliminar</button>
+                </td>
+              </tr>
+            ))}
+            {listaValores.length === 0 && (
+              <tr><td colSpan="4" style={{textAlign:"center", padding: "15px"}}>No hay datos registrados aún.</td></tr>
+            )}
+          </tbody>
+        </table>
       </div>
 
-      {/* ÁREA INFERIOR ORDENADA: TABLAS Y GRÁFICOS LADO A LADO */}
-      <div style={{ display: "flex", flexWrap: "wrap", gap: "25px", alignItems: "flex-start" }}>
-        
-        {/* COLUMNA IZQUIERDA: TABLA DE DATOS */}
-        <div style={{ flex: "1 1 35%", minWidth: "320px", border: "1px solid #ddd", borderRadius: "8px", backgroundColor: "#fff", boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
-          <h4 style={{ margin: 0, padding: "12px 15px", backgroundColor: "#f4f7f6", borderBottom: "1px solid #ddd", color: "#424242", borderRadius: "8px 8px 0 0" }}>
-            📑 Registros en Base de Datos
-          </h4>
-          <div style={{ maxHeight: "400px", overflowY: "auto", padding: "10px" }}>
-            <table className="sql-table" style={{ margin: 0, width: "100%", borderCollapse: "collapse", fontSize: "14px" }}>
-              <thead style={{ position: "sticky", top: 0, backgroundColor: "#fff", zIndex: 1 }}>
-                <tr>
-                  <th style={{padding: "8px", borderBottom: "2px solid #ddd", textAlign: "left"}}>Tratamiento</th>
-                  <th style={{padding: "8px", borderBottom: "2px solid #ddd", textAlign: "center"}}>R</th>
-                  <th style={{padding: "8px", borderBottom: "2px solid #ddd", textAlign: "center"}}>Valor</th>
-                  <th style={{padding: "8px", borderBottom: "2px solid #ddd", textAlign: "center"}}>Acción</th>
-                </tr>
-              </thead>
-              <tbody>
-                {listaValores.map((dato) => (
-                  <tr key={dato.id} style={{ backgroundColor: "transparent" }}>
-                    <td style={{padding: "8px", borderBottom: "1px solid #eee"}}>{obtenerNombreTratamiento(dato.tratamiento)}</td>
-                    <td style={{padding: "8px", borderBottom: "1px solid #eee", textAlign: "center"}}>{dato.repeticion}</td>
-                    <td style={{padding: "8px", borderBottom: "1px solid #eee", textAlign: "center", fontWeight: "bold"}}>{dato.valor}</td>
-                    <td style={{padding: "8px", borderBottom: "1px solid #eee", textAlign: "center"}}>
-                      <button onClick={() => eliminarDato(dato.id)} style={{ padding: "4px 8px", backgroundColor: "#ffebee", color: "#c62828", border: "1px solid #ffcdd2", borderRadius: "4px", cursor: "pointer", fontSize: "11px" }}>X</button>
-                    </td>
-                  </tr>
-                ))}
-                {listaValores.length === 0 && (
-                  <tr><td colSpan="4" style={{textAlign:"center", padding: "15px", color: "#757575"}}>No hay datos registrados aún.</td></tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+      {mostrarAnalisis && listaValores.length > 0 && (
+        <div style={{ marginTop: "20px" }}>
+          <AnalisisEstadistico 
+            valores={listaValores} 
+            tratamientos={listaTratamientos} 
+            nombreCultivo={nombreCultivo} 
+            nombreVariable={nombreVariable}
+            nombreLote={nombreLote}
+            anio={anio}
+          />
         </div>
-
-        {/* COLUMNA DERECHA: GRÁFICOS Y ANÁLISIS */}
-        {mostrarAnalisis && listaValores.length > 0 && (
-          <div style={{ flex: "1 1 60%", minWidth: "400px", border: "1px solid #b3e5fc", borderRadius: "8px", backgroundColor: "#fbfdfd", padding: "15px", boxShadow: "0 1px 4px rgba(2, 119, 189, 0.1)" }}>
-            <h4 style={{ margin: "0 0 15px 0", color: "#0277bd", borderBottom: "1px solid #e1f5fe", paddingBottom: "10px" }}>
-              📈 Análisis Estadístico
-            </h4>
-            <AnalisisEstadistico 
-              valores={listaValores} 
-              tratamientos={listaTratamientos} 
-              nombreCultivo={nombreCultivo} 
-              nombreVariable={nombreVariable}
-              nombreLote={nombreLote}
-              anio={anio}
-            />
-          </div>
-        )}
-      </div>
-
+      )}
     </div>
   );
 }

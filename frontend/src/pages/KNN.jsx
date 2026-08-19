@@ -73,21 +73,17 @@ function KNN() {
         }
       });
 
-      // --- ALGORITMO DE ORDENAMIENTO ALFABÉTICO Y NUMÉRICO ---
       const detallesOrdenados = [...(res.data.detalles || [])].sort((a, b) => {
-        // 1. Orden alfabético por Tratamiento
         const tratA = (a.tratamiento || "").toString();
         const tratB = (b.tratamiento || "").toString();
         const comparacionTratamiento = tratA.localeCompare(tratB, undefined, { numeric: true, sensitivity: 'base' });
         
         if (comparacionTratamiento !== 0) return comparacionTratamiento;
 
-        // 2. Orden numérico por Planta
         const plantaA = a.planta !== null && a.planta !== undefined ? Number(a.planta) : 0;
         const plantaB = b.planta !== null && b.planta !== undefined ? Number(b.planta) : 0;
         if (plantaA !== plantaB) return plantaA - plantaB;
 
-        // 3. Orden numérico por Repetición
         const repA = Number(a.repeticion) || 0;
         const repB = Number(b.repeticion) || 0;
         return repA - repB;
@@ -100,7 +96,6 @@ function KNN() {
 
       setReporte(reporteActualizado);
 
-      // Generar gráfica a partir de los datos ya ordenados
       setGrafica({
         labels: detallesOrdenados.map(d => d.planta ? `P:${d.planta} R:${d.repeticion}` : `R:${d.repeticion}`),
         datasets: [{
@@ -159,24 +154,95 @@ function KNN() {
   const getNombreCultivo = () => listas.cultivos.find(c => c.id.toString() === filtros.cultivoId)?.nombre || '';
   const getNombreLote = () => listas.lotes.find(l => l.id.toString() === filtros.loteId)?.nombre || '';
 
-  const generarPDF = () => {
+  // --- FUNCIÓN MEJORADA PARA GENERAR Y PREVISUALIZAR PDF ---
+  const generarPDF = (modoPreview = false) => {
     const doc = new jsPDF();
     const fecha = new Date().toLocaleDateString();
 
+    // 1. Diseño del Encabezado Mejorado
+    doc.setFillColor(2, 119, 189); // Fondo Azul oscuro
+    doc.rect(0, 0, 210, 25, 'F'); 
+    doc.setTextColor(255, 255, 255); // Texto Blanco
     doc.setFontSize(18);
-    doc.setTextColor(40);
-    doc.text("Reporte de Auditoría de Anomalías (KNN/LOF)", 14, 22);
+    doc.setFont("helvetica", "bold");
+    doc.text("Reporte Técnico de Anomalías (KNN / LOF)", 14, 15);
     
     doc.setFontSize(10);
-    doc.text(`Fecha de generación: ${fecha}`, 14, 30);
-    doc.text(`Laboratorio UTC - Sistema In Vitro`, 14, 35);
+    doc.setFont("helvetica", "normal");
+    doc.text(`Fecha de generación: ${fecha} | Laboratorio UTC - Sistema In Vitro`, 14, 21);
 
-    doc.setFontSize(12);
-    doc.text("Resumen del Análisis:", 14, 45);
-    doc.setFontSize(10);
-    doc.text(`Cultivo: ${getNombreCultivo()} | Lote: ${getNombreLote()} | Año: ${filtros.anio}`, 14, 52);
-    doc.text(`Variable analizada: ${reporte.variable}`, 14, 57);
-    doc.text(`Total Registros: ${reporte.total_analizado} | Anomalías: ${reporte.total_anomalias}`, 14, 62);
+    let currentY = 35; // Variable para controlar la posición vertical
+    doc.setTextColor(40, 40, 40); // Restaurar color de texto a oscuro
+
+    // 2. Sección: Resumen General
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "bold");
+    doc.text("1. Resumen del Análisis", 14, currentY);
+    currentY += 7;
+    
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "normal");
+    doc.text(`Cultivo: ${getNombreCultivo()} | Lote: ${getNombreLote()} | Año: ${filtros.anio}`, 14, currentY);
+    currentY += 6;
+    doc.text(`Variable analizada: ${reporte.variable}`, 14, currentY);
+    currentY += 6;
+    doc.text(`Total Registros: ${reporte.total_analizado} | Anomalías Detectadas: ${reporte.total_anomalias}`, 14, currentY);
+    currentY += 12;
+
+    // 3. Sección: Métricas del Modelo (Si existen)
+    if (reporte.metricas) {
+      doc.setFontSize(14);
+      doc.setFont("helvetica", "bold");
+      doc.text("2. Evaluación del Modelo Predictivo", 14, currentY);
+      currentY += 7;
+      
+      doc.setFontSize(11);
+      doc.setFont("helvetica", "normal");
+      doc.text(`Exactitud (Accuracy): ${reporte.metricas.accuracy}%`, 14, currentY);
+      doc.text(`Precisión: ${reporte.metricas.precision}%`, 110, currentY);
+      currentY += 6;
+      doc.text(`Sensibilidad (Recall): ${reporte.metricas.recall}%`, 14, currentY);
+      doc.text(`F1-Score: ${reporte.metricas.f1_score}%`, 110, currentY);
+      currentY += 12;
+    }
+
+    // 4. Sección: Conclusiones y Diagnóstico
+    if (listaAnomaliasDetalladas.length > 0) {
+      doc.setFontSize(14);
+      doc.setFont("helvetica", "bold");
+      doc.text("3. Diagnóstico Técnico de Anomalías", 14, currentY);
+      currentY += 7;
+
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "normal");
+      
+      listaAnomaliasDetalladas.forEach(item => {
+        const texto = `• ${item.identificador} (${item.tratamiento}): ${item.conclusion}`;
+        // Dividir el texto largo en múltiples líneas para que no se salga de la hoja
+        const lineas = doc.splitTextToSize(texto, 180); 
+        
+        // Comprobar si nos quedamos sin espacio en la página
+        if (currentY + (lineas.length * 5) > 280) {
+          doc.addPage();
+          currentY = 20;
+        }
+        
+        doc.text(lineas, 14, currentY);
+        currentY += (lineas.length * 5) + 2; 
+      });
+      currentY += 8;
+    }
+
+    // 5. Sección: Tabla de Detalles
+    // Comprobamos si hay espacio para el título de la tabla
+    if (currentY > 260) {
+      doc.addPage();
+      currentY = 20;
+    }
+
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "bold");
+    doc.text("4. Detalle de Registros Analizados", 14, currentY);
 
     const tableData = reporte.detalles.map(d => [
       d.planta ? `${d.planta} (R: ${d.repeticion})` : `R: ${d.repeticion}`,
@@ -186,9 +252,11 @@ function KNN() {
     ]);
 
     autoTable(doc, {
-      startY: 70,
+      startY: currentY + 5,
       head: [['Planta (Rep)', 'Tratamiento', `Valor (${reporte.variable})`, 'Estado']],
       body: tableData,
+      theme: 'grid',
+      headStyles: { fillColor: [2, 119, 189] },
       didParseCell: (data) => {
         if (data.section === 'body' && data.column.index === 3) {
           if (data.cell.raw === 'ANOMALÍA') {
@@ -201,27 +269,42 @@ function KNN() {
       }
     });
 
+    // 6. Sección: Gráfico en una hoja nueva (Alta Nitidez)
     const canvas = document.querySelector('canvas');
     if (canvas) {
-      const imgData = canvas.toDataURL("image/png");
-      const currentY = doc.lastAutoTable.finalY + 10;
+      doc.addPage(); // Forzamos una página nueva exclusivamente para el gráfico
       
-      if (currentY > 200) {
-        doc.addPage();
-        doc.text("Gráfica de Distribución y Desviaciones:", 14, 20);
-        doc.addImage(imgData, 'PNG', 15, 30, 180, 80);
-      } else {
-        doc.text("Gráfica de Distribución y Desviaciones:", 14, currentY);
-        doc.addImage(imgData, 'PNG', 15, currentY + 5, 180, 80);
-      }
+      doc.setFontSize(14);
+      doc.setFont("helvetica", "bold");
+      doc.text("5. Representación Gráfica Multidimensional", 14, 20);
+      
+      // Capturamos el canvas con calidad 1.0 (máxima)
+      const imgData = canvas.toDataURL("image/png", 1.0); 
+      
+      // Calculamos la relación de aspecto para no deformar la imagen
+      const pdfWidth = 180; // Ancho máximo permitido en el PDF
+      const pdfHeight = (canvas.height * pdfWidth) / canvas.width; 
+      
+      // Insertamos la imagen respetando su proporción natural
+      doc.addImage(imgData, 'PNG', 15, 30, pdfWidth, pdfHeight);
     }
 
-    doc.save(`Reporte-de-anomalias_${getNombreCultivo()}_${reporte.variable}.pdf`);
+    // 7. Decidir si previsualizar o descargar
+    if (modoPreview) {
+      // Crea una URL temporal del archivo PDF y la abre en una nueva pestaña
+      const pdfBlobUrl = doc.output('bloburl');
+      window.open(pdfBlobUrl, '_blank');
+    } else {
+      // Guarda directamente el archivo
+      doc.save(`Reporte-anomalias_${getNombreCultivo()}_${reporte.variable}.pdf`);
+    }
   };
 
   const opcionesGrafica = { 
     responsive: true, 
     maintainAspectRatio: false, 
+    // Aseguramos que la animación se complete para que la captura sea perfecta
+    animation: { duration: 0 }, 
     plugins: { legend: { display: false } },
     scales: { y: { title: { display: true, text: `Escala (${reporte?.variable})`, font: { weight: 'bold' } } } }
   };
@@ -298,10 +381,16 @@ function KNN() {
               {loading ? "⏳ Procesando Muestras..." : "🔍 Iniciar Análisis Computacional"}
             </button>
             
+            {/* BOTONES ACTUALIZADOS PARA PDF */}
             {reporte && (
-              <button onClick={generarPDF} className="btn" style={{ backgroundColor: "#ef4444", color: "white" }}>
-                📄 Exportar Documento PDF
-              </button>
+              <div style={{ display: "flex", gap: "10px" }}>
+                <button onClick={() => generarPDF(true)} className="btn" style={{ backgroundColor: "#0288d1", color: "white" }}>
+                  👁️ Vista Previa PDF
+                </button>
+                <button onClick={() => generarPDF(false)} className="btn" style={{ backgroundColor: "#ef4444", color: "white" }}>
+                  ⬇️ Descargar PDF
+                </button>
+              </div>
             )}
           </div>
         </div>
@@ -317,107 +406,94 @@ function KNN() {
               </p>
             </div>
 
-                  {reporte.metricas && (
-        <div className="form-card" style={{ marginTop: "20px", marginBottom: "20px" }}>
-          <h4 style={{ borderBottom: "2px solid #e2e8f0", paddingBottom: "10px", marginTop: 0 }}>
-            📊 Evaluación del Modelo (Validación Cruzada k-fold)
-          </h4>
-          
-          {/* Tarjetas Informativas de Métricas con Explicación Integrada */}
-          <div style={{ display: "flex", gap: "15px", flexWrap: "wrap", marginTop: "15px" }}>
-            <div style={{ flex: 1, minWidth: "140px", padding: "15px", backgroundColor: "#f8fafc", borderRadius: "8px", textAlign: "center", border: "1px solid #e2e8f0" }}>
-              <span style={{ display: "block", fontSize: "0.9em", color: "#64748b", fontWeight: "600" }}>Exactitud (Accuracy)</span>
-              <strong style={{ fontSize: "1.6em", color: "#0f172a", display: "block", margin: "5px 0" }}>{reporte.metricas.accuracy}%</strong>
-              <small style={{ fontSize: "0.75em", color: "#64748b" }}>Porcentaje total de clasificaciones correctas (Normales y Anomalías).</small>
-            </div>
+            {reporte.metricas && (
+              <div className="form-card" style={{ marginTop: "20px", marginBottom: "20px" }}>
+                <h4 style={{ borderBottom: "2px solid #e2e8f0", paddingBottom: "10px", marginTop: 0 }}>
+                  📊 Evaluación del Modelo (Validación Cruzada k-fold)
+                </h4>
+                
+                <div style={{ display: "flex", gap: "15px", flexWrap: "wrap", marginTop: "15px" }}>
+                  <div style={{ flex: 1, minWidth: "140px", padding: "15px", backgroundColor: "#f8fafc", borderRadius: "8px", textAlign: "center", border: "1px solid #e2e8f0" }}>
+                    <span style={{ display: "block", fontSize: "0.9em", color: "#64748b", fontWeight: "600" }}>Exactitud (Accuracy)</span>
+                    <strong style={{ fontSize: "1.6em", color: "#0f172a", display: "block", margin: "5px 0" }}>{reporte.metricas.accuracy}%</strong>
+                  </div>
+                  <div style={{ flex: 1, minWidth: "140px", padding: "15px", backgroundColor: "#f8fafc", borderRadius: "8px", textAlign: "center", border: "1px solid #e2e8f0" }}>
+                    <span style={{ display: "block", fontSize: "0.9em", color: "#64748b", fontWeight: "600" }}>Precisión</span>
+                    <strong style={{ fontSize: "1.6em", color: "#0f172a", display: "block", margin: "5px 0" }}>{reporte.metricas.precision}%</strong>
+                  </div>
+                  <div style={{ flex: 1, minWidth: "140px", padding: "15px", backgroundColor: "#f8fafc", borderRadius: "8px", textAlign: "center", border: "1px solid #e2e8f0" }}>
+                    <span style={{ display: "block", fontSize: "0.9em", color: "#64748b", fontWeight: "600" }}>Sensibilidad (Recall)</span>
+                    <strong style={{ fontSize: "1.6em", color: "#0f172a", display: "block", margin: "5px 0" }}>{reporte.metricas.recall}%</strong>
+                  </div>
+                  <div style={{ flex: 1, minWidth: "140px", padding: "15px", backgroundColor: "#f8fafc", borderRadius: "8px", textAlign: "center", border: "1px solid #e2e8f0" }}>
+                    <span style={{ display: "block", fontSize: "0.9em", color: "#64748b", fontWeight: "600" }}>F1-Score</span>
+                    <strong style={{ fontSize: "1.6em", color: "#0f172a", display: "block", margin: "5px 0" }}>{reporte.metricas.f1_score}%</strong>
+                  </div>
+                </div>
 
-            <div style={{ flex: 1, minWidth: "140px", padding: "15px", backgroundColor: "#f8fafc", borderRadius: "8px", textAlign: "center", border: "1px solid #e2e8f0" }}>
-              <span style={{ display: "block", fontSize: "0.9em", color: "#64748b", fontWeight: "600" }}>Precisión</span>
-              <strong style={{ fontSize: "1.6em", color: "#0f172a", display: "block", margin: "5px 0" }}>{reporte.metricas.precision}%</strong>
-              <small style={{ fontSize: "0.75em", color: "#64748b" }}>De los registros marcados como anomalía, cuántos lo eran verdaderamente.</small>
-            </div>
-
-            <div style={{ flex: 1, minWidth: "140px", padding: "15px", backgroundColor: "#f8fafc", borderRadius: "8px", textAlign: "center", border: "1px solid #e2e8f0" }}>
-              <span style={{ display: "block", fontSize: "0.9em", color: "#64748b", fontWeight: "600" }}>Sensibilidad (Recall)</span>
-              <strong style={{ fontSize: "1.6em", color: "#0f172a", display: "block", margin: "5px 0" }}>{reporte.metricas.recall}%</strong>
-              <small style={{ fontSize: "0.75em", color: "#64748b" }}>Capacidad del algoritmo para detectar todas las anomalías reales existentes.</small>
-            </div>
-
-            <div style={{ flex: 1, minWidth: "140px", padding: "15px", backgroundColor: "#f8fafc", borderRadius: "8px", textAlign: "center", border: "1px solid #e2e8f0" }}>
-              <span style={{ display: "block", fontSize: "0.9em", color: "#64748b", fontWeight: "600" }}>F1-Score</span>
-              <strong style={{ fontSize: "1.6em", color: "#0f172a", display: "block", margin: "5px 0" }}>{reporte.metricas.f1_score}%</strong>
-              <small style={{ fontSize: "0.75em", color: "#64748b" }}>Balance armónico entre la Precisión y la Sensibilidad del modelo.</small>
-            </div>
-          </div>
-
-          {/* Matriz de Confusión Estructurada con Ejes */}
-          {reporte.metricas.matriz_confusion && (
-            <div style={{ marginTop: "25px" }}>
-              <h5 style={{ color: "#475569", marginBottom: "12px" }}>Matriz de Confusión Detallada</h5>
-              
-              <div style={{ overflowX: "auto" }}>
-                <table style={{ width: "100%", maxWidth: "480px", borderCollapse: "collapse", textAlign: "center", fontSize: "13px" }}>
-                  <thead>
-                    <tr>
-                      <th colSpan="2" rowSpan="2" style={{ border: "none", backgroundColor: "transparent" }}></th>
-                      <th colSpan="2" style={{ backgroundColor: "#0277bd", color: "white", padding: "6px", borderRadius: "4px 4px 0 0" }}>
-                        Predicción del Algoritmo
-                      </th>
-                    </tr>
-                    <tr>
-                      <th style={{ backgroundColor: "#e2e8f0", color: "#334155", padding: "8px", width: "35%" }}>Anomalía</th>
-                      <th style={{ backgroundColor: "#e2e8f0", color: "#334155", padding: "8px", width: "35%" }}>Normal</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td rowSpan="2" style={{ backgroundColor: "#475569", color: "white", fontWeight: "bold", writingMode: "vertical-lr", transform: "rotate(180deg)", padding: "10px", borderRadius: "4px 0 0 4px" }}>
-                        Valor Real
-                      </td>
-                      <td style={{ backgroundColor: "#f1f5f9", fontWeight: "bold", color: "#334155", padding: "10px" }}>
-                        Anomalía
-                      </td>
-                      <td style={{ border: "1px solid #cbd5e1", padding: "10px", backgroundColor: "#f0fdf4" }}>
-                        <strong style={{ color: "#16a34a", fontSize: "1.2em", display: "block" }}>
-                          {reporte.metricas.matriz_confusion[0][0]}
-                        </strong>
-                        <span style={{ fontSize: "10px", color: "#15803d" }}>Verdaderos Positivos</span>
-                      </td>
-                      <td style={{ border: "1px solid #cbd5e1", padding: "10px", backgroundColor: "#fef2f2" }}>
-                        <strong style={{ color: "#dc2626", fontSize: "1.2em", display: "block" }}>
-                          {reporte.metricas.matriz_confusion[0][1]}
-                        </strong>
-                        <span style={{ fontSize: "10px", color: "#b91c1c" }}>Falsos Negativos</span>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td style={{ backgroundColor: "#f1f5f9", fontWeight: "bold", color: "#334155", padding: "10px" }}>
-                        Normal
-                      </td>
-                      <td style={{ border: "1px solid #cbd5e1", padding: "10px", backgroundColor: "#fef2f2" }}>
-                        <strong style={{ color: "#dc2626", fontSize: "1.2em", display: "block" }}>
-                          {reporte.metricas.matriz_confusion[1][0]}
-                        </strong>
-                        <span style={{ fontSize: "10px", color: "#b91c1c" }}>Falsos Positivos</span>
-                      </td>
-                      <td style={{ border: "1px solid #cbd5e1", padding: "10px", backgroundColor: "#f0fdf4" }}>
-                        <strong style={{ color: "#16a34a", fontSize: "1.2em", display: "block" }}>
-                          {reporte.metricas.matriz_confusion[1][1]}
-                        </strong>
-                        <span style={{ fontSize: "10px", color: "#15803d" }}>Verdaderos Negativos</span>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
+                {reporte.metricas.matriz_confusion && (
+                  <div style={{ marginTop: "25px" }}>
+                    <h5 style={{ color: "#475569", marginBottom: "12px" }}>Matriz de Confusión Detallada</h5>
+                    <div style={{ overflowX: "auto" }}>
+                      <table style={{ width: "100%", maxWidth: "480px", borderCollapse: "collapse", textAlign: "center", fontSize: "13px" }}>
+                        <thead>
+                          <tr>
+                            <th colSpan="2" rowSpan="2" style={{ border: "none", backgroundColor: "transparent" }}></th>
+                            <th colSpan="2" style={{ backgroundColor: "#0277bd", color: "white", padding: "6px", borderRadius: "4px 4px 0 0" }}>
+                              Predicción del Algoritmo
+                            </th>
+                          </tr>
+                          <tr>
+                            <th style={{ backgroundColor: "#e2e8f0", color: "#334155", padding: "8px", width: "35%" }}>Anomalía</th>
+                            <th style={{ backgroundColor: "#e2e8f0", color: "#334155", padding: "8px", width: "35%" }}>Normal</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr>
+                            <td rowSpan="2" style={{ backgroundColor: "#475569", color: "white", fontWeight: "bold", writingMode: "vertical-lr", transform: "rotate(180deg)", padding: "10px", borderRadius: "4px 0 0 4px" }}>
+                              Valor Real
+                            </td>
+                            <td style={{ backgroundColor: "#f1f5f9", fontWeight: "bold", color: "#334155", padding: "10px" }}>
+                              Anomalía
+                            </td>
+                            <td style={{ border: "1px solid #cbd5e1", padding: "10px", backgroundColor: "#f0fdf4" }}>
+                              <strong style={{ color: "#16a34a", fontSize: "1.2em", display: "block" }}>
+                                {reporte.metricas.matriz_confusion[0][0]}
+                              </strong>
+                              <span style={{ fontSize: "10px", color: "#15803d" }}>Verdaderos Positivos</span>
+                            </td>
+                            <td style={{ border: "1px solid #cbd5e1", padding: "10px", backgroundColor: "#fef2f2" }}>
+                              <strong style={{ color: "#dc2626", fontSize: "1.2em", display: "block" }}>
+                                {reporte.metricas.matriz_confusion[0][1]}
+                              </strong>
+                              <span style={{ fontSize: "10px", color: "#b91c1c" }}>Falsos Negativos</span>
+                            </td>
+                          </tr>
+                          <tr>
+                            <td style={{ backgroundColor: "#f1f5f9", fontWeight: "bold", color: "#334155", padding: "10px" }}>
+                              Normal
+                            </td>
+                            <td style={{ border: "1px solid #cbd5e1", padding: "10px", backgroundColor: "#fef2f2" }}>
+                              <strong style={{ color: "#dc2626", fontSize: "1.2em", display: "block" }}>
+                                {reporte.metricas.matriz_confusion[1][0]}
+                              </strong>
+                              <span style={{ fontSize: "10px", color: "#b91c1c" }}>Falsos Positivos</span>
+                            </td>
+                            <td style={{ border: "1px solid #cbd5e1", padding: "10px", backgroundColor: "#f0fdf4" }}>
+                              <strong style={{ color: "#16a34a", fontSize: "1.2em", display: "block" }}>
+                                {reporte.metricas.matriz_confusion[1][1]}
+                              </strong>
+                              <span style={{ fontSize: "10px", color: "#15803d" }}>Verdaderos Negativos</span>
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
               </div>
-              
-              <small style={{ color: "#64748b", display: "block", marginTop: "10px" }}>
-                * Las celdas verdes muestran clasificaciones acertadas. Las celdas rojas representan errores de diagnóstico del modelo.
-              </small>
-            </div>
-          )}
-        </div>
-)}
+            )}
+
             {listaAnomaliasDetalladas.length > 0 && (
               <div className="anomaly-diagnostic-panel">
                 <div className="diagnostic-card">
@@ -475,7 +551,7 @@ function KNN() {
                 </div>
               </div>
 
-              <div className="chart-container" style={{ height: "400px" }}>
+              <div className="chart-container" style={{ height: "400px", backgroundColor: "#fff" }}>
                 {tipoGrafico === "bar" ? (
                   <Bar data={grafica} options={opcionesGrafica} />
                 ) : (
