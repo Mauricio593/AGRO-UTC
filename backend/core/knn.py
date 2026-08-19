@@ -1,73 +1,75 @@
 import numpy as np
 from sklearn.neighbors import KNeighborsClassifier
-from sklearn.tree import DecisionTreeClassifier
-from sklearn.svm import SVC
 from sklearn.model_selection import KFold, cross_val_predict
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix
-import warnings
-import gc  # 1. Importamos el recolector de basura de Python
 
-warnings.filterwarnings('ignore')
-
-def calcular_metricas(y_true, y_pred):
-    return {
-        'accuracy': round(accuracy_score(y_true, y_pred) * 100, 2),
-        'precision': round(precision_score(y_true, y_pred, average='weighted', zero_division=0) * 100, 2),
-        'recall': round(recall_score(y_true, y_pred, average='weighted', zero_division=0) * 100, 2),
-        'f1_score': round(f1_score(y_true, y_pred, average='weighted', zero_division=0) * 100, 2),
-        'matriz_confusion': confusion_matrix(y_true, y_pred).tolist()
-    }
-
-# 2. Reducimos k_folds a 3 para disminuir la carga computacional
-def evaluar_modelos_vitrolab(data, k_folds=3):
+def entrenar_knn(data):
     """
-    Ejecuta y compara modelos, optimizado para bajo consumo de memoria RAM.
+    Entrena el modelo KNN básico usando todo el conjunto de datos.
     """
-    # 3. Forzamos a que el tipo de dato sea float32 (mitad de memoria que float64)
-    X = np.array([item['valores'] for item in data], dtype=np.float32)
+    X = []
+    y = []
+
+    for item in data:
+        X.append(item['valores'])
+        y.append(item['label'])
+
+    # Ajustamos n_neighbors dinámicamente para que no supere el número de muestras
+    n_vecinos = min(3, len(X))
+    modelo = KNeighborsClassifier(n_neighbors=n_vecinos)
+    modelo.fit(X, y)
+
+    return modelo
+
+def predecir(modelo, nuevo):
+    """
+    Realiza una predicción individual.
+    """
+    return modelo.predict([nuevo])[0]
+
+def evaluar_modelo_knn(data, k_folds=5):
+    """
+    Ejecuta validación cruzada (k-fold) y calcula métricas de rendimiento.
+    Retorna un diccionario estructurado para enviar por JSON al frontend.
+    """
+    # 1. Separar matriz de características (X) y vector objetivo (y)
+    X = np.array([item['valores'] for item in data])
     y = np.array([item['label'] for item in data])
     
+    # 2. Ajuste de seguridad: Asegurar que los k-folds no superen la cantidad de datos
     k_folds_reales = min(k_folds, len(X))
     if k_folds_reales < 2:
+        # Si hay menos de 2 registros, no es posible hacer cross-validation
         return None 
 
+    # Asegurar vecinos válidos (al menos 1, pero no mayor a las muestras de entrenamiento)
     n_vecinos = min(3, len(X) - 1)
     if n_vecinos < 1:
         n_vecinos = 1
 
+    # 3. Configurar el modelo y la estrategia K-Fold
+    modelo = KNeighborsClassifier(n_neighbors=n_vecinos)
     kf = KFold(n_splits=k_folds_reales, shuffle=True, random_state=42)
-    
-    # Diccionario para almacenar los resultados y devolverlos al final
-    resultados_metricas = {}
 
-    # --- ALGORITMO 1: KNN ---
-    modelo_knn = KNeighborsClassifier(n_neighbors=n_vecinos)
-    y_pred_knn = cross_val_predict(modelo_knn, X, y, cv=kf)
-    resultados_metricas['KNN'] = calcular_metricas(y, y_pred_knn)
-    
-    # 4. Eliminamos variables pesadas de KNN y limpiamos RAM
-    del modelo_knn
-    del y_pred_knn
-    gc.collect() 
+    # 4. Obtener las predicciones combinadas de todos los k-folds
+    y_pred = cross_val_predict(modelo, X, y, cv=kf)
 
-    # --- ALGORITMO 2: Árboles de Decisión ---
-    modelo_tree = DecisionTreeClassifier(random_state=42)
-    y_pred_tree = cross_val_predict(modelo_tree, X, y, cv=kf)
-    resultados_metricas['DecisionTree'] = calcular_metricas(y, y_pred_tree)
+    # 5. Calcular las métricas
+    # Usamos average='weighted' para manejar correctamente datos desbalanceados
+    # (ej. si hay muchas más plantas normales que anómalas)
+    exactitud = accuracy_score(y, y_pred)
+    precision = precision_score(y, y_pred, average='weighted', zero_division=0)
+    sensibilidad = recall_score(y, y_pred, average='weighted', zero_division=0)
+    f1 = f1_score(y, y_pred, average='weighted', zero_division=0)
     
-    # 4. Eliminamos variables pesadas de Árboles y limpiamos RAM
-    del modelo_tree
-    del y_pred_tree
-    gc.collect()
+    # Generar la matriz de confusión y convertirla a lista nativa para JSON
+    matriz = confusion_matrix(y, y_pred).tolist()
 
-    # --- ALGORITMO 3: SVM ---
-    modelo_svm = SVC(kernel='linear', random_state=42)
-    y_pred_svm = cross_val_predict(modelo_svm, X, y, cv=kf)
-    resultados_metricas['SVM'] = calcular_metricas(y, y_pred_svm)
-    
-    # 4. Eliminamos variables pesadas de SVM y limpiamos RAM
-    del modelo_svm
-    del y_pred_svm
-    gc.collect()
-
-    return resultados_metricas
+    # 6. Empaquetar resultados en porcentajes (0 a 100)
+    return {
+        "accuracy": round(exactitud * 100, 2),
+        "precision": round(precision * 100, 2),
+        "recall": round(sensibilidad * 100, 2),
+        "f1_score": round(f1 * 100, 2),
+        "matriz_confusion": matriz
+    }
