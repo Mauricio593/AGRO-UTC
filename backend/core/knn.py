@@ -1,6 +1,7 @@
 import numpy as np
-from sklearn.neighbors import KNeighborsClassifier, LocalOutlierFactor
-from sklearn.ensemble import IsolationForest
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.svm import SVC
 from sklearn.model_selection import KFold, cross_val_predict
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix
 import warnings
@@ -19,6 +20,7 @@ def entrenar_knn(data):
         X.append(item['valores'])
         y.append(item['label'])
 
+    # Ajustamos n_neighbors dinámicamente para que no supere el número de muestras
     n_vecinos = min(3, len(X))
     modelo = KNeighborsClassifier(n_neighbors=n_vecinos)
     modelo.fit(X, y)
@@ -33,7 +35,7 @@ def predecir(modelo, nuevo):
 
 def calcular_metricas(y_true, y_pred):
     """
-    Calcula el diccionario de métricas estandarizado para cualquier algoritmo.
+    Calcula el diccionario de métricas estandarizado para cualquier algoritmo supervisado.
     """
     return {
         'accuracy': round(accuracy_score(y_true, y_pred) * 100, 2),
@@ -43,15 +45,14 @@ def calcular_metricas(y_true, y_pred):
         'matriz_confusion': confusion_matrix(y_true, y_pred).tolist()
     }
 
-def evaluar_modelo_knn(data, k_folds=5):
+def evaluar_modelos_vitrolab(data, k_folds=5):
     """
-    Ejecuta y compara KNN, Isolation Forest y Local Outlier Factor (LOF).
+    Ejecuta y compara KNN, Árboles de Decisión y SVM.
     Retorna las métricas comparativas para el frontend.
     """
     # 1. Separar matriz de características (X) y vector objetivo (y)
     X = np.array([item['valores'] for item in data])
-    # Estandarizamos las etiquetas a booleanos para evitar conflictos (True=Anomalía)
-    y = np.array([bool(item['label']) for item in data])
+    y = np.array([item['label'] for item in data])
     
     k_folds_reales = min(k_folds, len(X))
     if k_folds_reales < 2:
@@ -61,29 +62,23 @@ def evaluar_modelo_knn(data, k_folds=5):
     if n_vecinos < 1:
         n_vecinos = 1
 
-    # Estimamos la proporción real de anomalías para calibrar IF y LOF
-    proporcion_anomalias = sum(y) / len(y) if sum(y) > 0 else 0.05
-    contaminacion = max(0.01, min(0.49, proporcion_anomalias)) # Limite seguro
+    kf = KFold(n_splits=k_folds_reales, shuffle=True, random_state=42)
 
     # --- ALGORITMO 1: KNN (K-Nearest Neighbors) ---
     modelo_knn = KNeighborsClassifier(n_neighbors=n_vecinos)
-    kf = KFold(n_splits=k_folds_reales, shuffle=True, random_state=42)
     y_pred_knn = cross_val_predict(modelo_knn, X, y, cv=kf)
 
-    # --- ALGORITMO 2: Isolation Forest ---
-    iso_forest = IsolationForest(contamination=contaminacion, random_state=42)
-    preds_if = iso_forest.fit_predict(X)
-    # Scikit-Learn devuelve -1 para anomalía y 1 para normal. Lo mapeamos a True/False.
-    y_pred_if = np.array([True if p == -1 else False for p in preds_if])
+    # --- ALGORITMO 2: Árboles de Decisión ---
+    modelo_tree = DecisionTreeClassifier(random_state=42)
+    y_pred_tree = cross_val_predict(modelo_tree, X, y, cv=kf)
 
-    # --- ALGORITMO 3: Local Outlier Factor (LOF) ---
-    lof = LocalOutlierFactor(n_neighbors=n_vecinos, contamination=contaminacion)
-    preds_lof = lof.fit_predict(X)
-    y_pred_lof = np.array([True if p == -1 else False for p in preds_lof])
+    # --- ALGORITMO 3: SVM (Support Vector Machine) ---
+    modelo_svm = SVC(kernel='linear', random_state=42)
+    y_pred_svm = cross_val_predict(modelo_svm, X, y, cv=kf)
 
     # Construimos y retornamos el JSON comparativo
     return {
         'KNN': calcular_metricas(y, y_pred_knn),
-        'IsolationForest': calcular_metricas(y, y_pred_if),
-        'LOF': calcular_metricas(y, y_pred_lof)
+        'DecisionTree': calcular_metricas(y, y_pred_tree),
+        'SVM': calcular_metricas(y, y_pred_svm)
     }
