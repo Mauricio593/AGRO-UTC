@@ -1,18 +1,13 @@
 import React, { useState, useEffect } from "react";
-import API from "../services/api"; // Importación centralizada
+import API from "../services/api";
 import Navbar from "../components/Navbar";
-
-// Importación del CSS separado
 import "./KNN.css"; 
 
-// 1. Añadimos PointElement y LineElement para el gráfico de líneas
 import { Chart as ChartJS, BarElement, CategoryScale, LinearScale, Tooltip, Legend, PointElement, LineElement } from "chart.js";
 import { Bar, Line } from "react-chartjs-2";
-
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
-// 2. Registramos los nuevos elementos para que ChartJS los reconozca
 ChartJS.register(BarElement, CategoryScale, LinearScale, Tooltip, Legend, PointElement, LineElement);
 
 function KNN() {
@@ -22,11 +17,8 @@ function KNN() {
   const [reporte, setReporte] = useState(null);
   const [loading, setLoading] = useState(false);
   const [grafica, setGrafica] = useState(null);
-  
-  // 3. Nuevo estado para controlar el tipo de gráfica
   const [tipoGrafico, setTipoGrafico] = useState("bar"); 
 
-  // A. Cargar Cultivos y Variables al abrir la pantalla
   useEffect(() => {
     API.get('cultivos/')
       .then(res => setListas(prev => ({ ...prev, cultivos: res.data })))
@@ -42,7 +34,6 @@ function KNN() {
       .catch(err => console.error("Error cargando variables:", err));
   }, []);
 
-  // B. Cargar Lotes SOLO del Cultivo seleccionado
   useEffect(() => {
     if (filtros.cultivoId) {
       API.get(`unidades/?cultivo=${filtros.cultivoId}`)
@@ -53,7 +44,6 @@ function KNN() {
     }
   }, [filtros.cultivoId]);
 
-  // C. Cargar Años SOLO del Lote seleccionado
   useEffect(() => {
     if (filtros.loteId) {
       API.get(`experimentos/?unidad=${filtros.loteId}`)
@@ -66,7 +56,6 @@ function KNN() {
       setListas(prev => ({ ...prev, anios: [] }));
     }
   }, [filtros.loteId]);
-
 
   const analizarDatos = async () => {
     if (!filtros.cultivoId || !filtros.loteId || !filtros.anio || !filtros.variable) {
@@ -84,21 +73,47 @@ function KNN() {
         }
       });
 
-      setReporte(res.data);
+      // --- ALGORITMO DE ORDENAMIENTO ALFABÉTICO Y NUMÉRICO ---
+      const detallesOrdenados = [...(res.data.detalles || [])].sort((a, b) => {
+        // 1. Orden alfabético por Tratamiento
+        const tratA = (a.tratamiento || "").toString();
+        const tratB = (b.tratamiento || "").toString();
+        const comparacionTratamiento = tratA.localeCompare(tratB, undefined, { numeric: true, sensitivity: 'base' });
+        
+        if (comparacionTratamiento !== 0) return comparacionTratamiento;
 
+        // 2. Orden numérico por Planta
+        const plantaA = a.planta !== null && a.planta !== undefined ? Number(a.planta) : 0;
+        const plantaB = b.planta !== null && b.planta !== undefined ? Number(b.planta) : 0;
+        if (plantaA !== plantaB) return plantaA - plantaB;
+
+        // 3. Orden numérico por Repetición
+        const repA = Number(a.repeticion) || 0;
+        const repB = Number(b.repeticion) || 0;
+        return repA - repB;
+      });
+
+      const reporteActualizado = {
+        ...res.data,
+        detalles: detallesOrdenados
+      };
+
+      setReporte(reporteActualizado);
+
+      // Generar gráfica a partir de los datos ya ordenados
       setGrafica({
-        // 4. Validación para evitar imprimir 'P:null'. Si es null, solo muestra la repetición.
-        labels: res.data.detalles.map(d => d.planta ? `P:${d.planta} R:${d.repeticion}` : `R:${d.repeticion}`),
+        labels: detallesOrdenados.map(d => d.planta ? `P:${d.planta} R:${d.repeticion}` : `R:${d.repeticion}`),
         datasets: [{
-          label: `Valores de ${res.data.variable}`,
-          data: res.data.detalles.map(d => d.valor),
-          backgroundColor: res.data.detalles.map(d => d.es_anomalia ? "rgba(211, 47, 47, 0.85)" : "rgba(2, 119, 189, 0.75)"),
-          borderColor: res.data.detalles.map(d => d.es_anomalia ? "rgba(211, 47, 47, 1)" : "rgba(2, 119, 189, 1)"),
+          label: `Valores de ${reporteActualizado.variable}`,
+          data: detallesOrdenados.map(d => d.valor),
+          backgroundColor: detallesOrdenados.map(d => d.es_anomalia ? "rgba(211, 47, 47, 0.85)" : "rgba(2, 119, 189, 0.75)"),
+          borderColor: detallesOrdenados.map(d => d.es_anomalia ? "rgba(211, 47, 47, 1)" : "rgba(2, 119, 189, 1)"),
           borderWidth: 1,
           borderRadius: 4,
-          tension: 0.3 // Da un efecto curvo si se usa el gráfico de líneas
+          tension: 0.3
         }]
       });
+
     } catch (error) {
       console.error("Detalle completo del error del servidor:", error.response?.data);
       alert(error.response?.data?.error || "Error al conectar con el servidor para procesar KNN. Revisa la consola.");
@@ -131,7 +146,6 @@ function KNN() {
       }
 
       return {
-        // 5. Ocultamos 'Planta null' del diagnóstico
         identificador: anom.planta ? `Planta ${anom.planta} (Repetición ${anom.repeticion})` : `Repetición ${anom.repeticion}`,
         tratamiento: anom.tratamiento,
         valor: anom.valor,
@@ -165,7 +179,6 @@ function KNN() {
     doc.text(`Total Registros: ${reporte.total_analizado} | Anomalías: ${reporte.total_anomalias}`, 14, 62);
 
     const tableData = reporte.detalles.map(d => [
-      // 6. Ocultamos el nulo en la tabla del PDF
       d.planta ? `${d.planta} (R: ${d.repeticion})` : `R: ${d.repeticion}`,
       d.tratamiento,
       d.valor,
@@ -206,7 +219,6 @@ function KNN() {
     doc.save(`Reporte_Auditoria_${getNombreCultivo()}_${reporte.variable}.pdf`);
   };
 
-  // 7. Opciones de estilo compartidas para ambas gráficas (Barras y Líneas)
   const opcionesGrafica = { 
     responsive: true, 
     maintainAspectRatio: false, 
@@ -379,7 +391,6 @@ function KNN() {
                 <tbody>
                   {reporte.detalles.map((d, i) => (
                     <tr key={i} style={{ backgroundColor: d.es_anomalia ? "#fef2f2" : "transparent" }}>
-                      {/* 8. Validación para ocultar nulos en la tabla de resultados */}
                       <td>{d.planta ? `${d.planta} (R: ${d.repeticion})` : `Repetición ${d.repeticion}`}</td>
                       <td>{d.tratamiento}</td>
                       <td style={{ fontWeight: "bold" }}>{d.valor}</td>
@@ -393,7 +404,6 @@ function KNN() {
             </div>
 
             <div className="form-card">
-              {/* 9. Botones o selector para cambiar el tipo de gráfica dinámicamente */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
                 <h4 style={{ margin: 0, color: "#475569" }}>Representación Gráfica</h4>
                 <div>
