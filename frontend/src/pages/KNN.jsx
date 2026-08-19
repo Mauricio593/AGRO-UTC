@@ -154,15 +154,14 @@ function KNN() {
   const getNombreCultivo = () => listas.cultivos.find(c => c.id.toString() === filtros.cultivoId)?.nombre || '';
   const getNombreLote = () => listas.lotes.find(l => l.id.toString() === filtros.loteId)?.nombre || '';
 
-  // --- FUNCIÓN MEJORADA PARA GENERAR Y PREVISUALIZAR PDF ---
   const generarPDF = (modoPreview = false) => {
     const doc = new jsPDF();
     const fecha = new Date().toLocaleDateString();
 
     // 1. Diseño del Encabezado Mejorado
-    doc.setFillColor(2, 119, 189); // Fondo Azul oscuro
+    doc.setFillColor(2, 119, 189); 
     doc.rect(0, 0, 210, 25, 'F'); 
-    doc.setTextColor(255, 255, 255); // Texto Blanco
+    doc.setTextColor(255, 255, 255); 
     doc.setFontSize(18);
     doc.setFont("helvetica", "bold");
     doc.text("Reporte Técnico de Anomalías (KNN / LOF)", 14, 15);
@@ -171,8 +170,8 @@ function KNN() {
     doc.setFont("helvetica", "normal");
     doc.text(`Fecha de generación: ${fecha} | Laboratorio UTC - Sistema In Vitro`, 14, 21);
 
-    let currentY = 35; // Variable para controlar la posición vertical
-    doc.setTextColor(40, 40, 40); // Restaurar color de texto a oscuro
+    let currentY = 35; 
+    doc.setTextColor(40, 40, 40); 
 
     // 2. Sección: Resumen General
     doc.setFontSize(14);
@@ -189,7 +188,7 @@ function KNN() {
     doc.text(`Total Registros: ${reporte.total_analizado} | Anomalías Detectadas: ${reporte.total_anomalias}`, 14, currentY);
     currentY += 12;
 
-    // 3. Sección: Métricas del Modelo (Si existen)
+    // 3. Sección: Métricas del Modelo 
     if (reporte.metricas) {
       doc.setFontSize(14);
       doc.setFont("helvetica", "bold");
@@ -206,7 +205,7 @@ function KNN() {
       currentY += 12;
     }
 
-    // 4. Sección: Conclusiones y Diagnóstico
+    // 4. Sección: Conclusiones y Diagnóstico (Con corrección de emojis)
     if (listaAnomaliasDetalladas.length > 0) {
       doc.setFontSize(14);
       doc.setFont("helvetica", "bold");
@@ -217,24 +216,26 @@ function KNN() {
       doc.setFont("helvetica", "normal");
       
       listaAnomaliasDetalladas.forEach(item => {
-        const texto = `• ${item.identificador} (${item.tratamiento}): ${item.conclusion}`;
-        // Dividir el texto largo en múltiples líneas para que no se salga de la hoja
+        // Limpiamos los emojis antes de pasarlos a jsPDF
+        let conclusionLimpia = item.conclusion
+          .replace(/⚠️/g, '[ALERTA]')
+          .replace(/🌱/g, '[NOTA BIOLÓGICA]');
+
+        const texto = `• ${item.identificador} (${item.tratamiento}): ${conclusionLimpia}`;
         const lineas = doc.splitTextToSize(texto, 180); 
         
-        // Comprobar si nos quedamos sin espacio en la página
         if (currentY + (lineas.length * 5) > 280) {
           doc.addPage();
           currentY = 20;
         }
         
         doc.text(lineas, 14, currentY);
-        currentY += (lineas.length * 5) + 2; 
+        currentY += (lineas.length * 5) + 3; 
       });
       currentY += 8;
     }
 
     // 5. Sección: Tabla de Detalles
-    // Comprobamos si hay espacio para el título de la tabla
     if (currentY > 260) {
       doc.addPage();
       currentY = 20;
@@ -272,30 +273,23 @@ function KNN() {
     // 6. Sección: Gráfico en una hoja nueva (Alta Nitidez)
     const canvas = document.querySelector('canvas');
     if (canvas) {
-      doc.addPage(); // Forzamos una página nueva exclusivamente para el gráfico
-      
+      doc.addPage(); 
       doc.setFontSize(14);
       doc.setFont("helvetica", "bold");
       doc.text("5. Representación Gráfica Multidimensional", 14, 20);
       
-      // Capturamos el canvas con calidad 1.0 (máxima)
       const imgData = canvas.toDataURL("image/png", 1.0); 
-      
-      // Calculamos la relación de aspecto para no deformar la imagen
-      const pdfWidth = 180; // Ancho máximo permitido en el PDF
+      const pdfWidth = 180; 
       const pdfHeight = (canvas.height * pdfWidth) / canvas.width; 
       
-      // Insertamos la imagen respetando su proporción natural
       doc.addImage(imgData, 'PNG', 15, 30, pdfWidth, pdfHeight);
     }
 
     // 7. Decidir si previsualizar o descargar
     if (modoPreview) {
-      // Crea una URL temporal del archivo PDF y la abre en una nueva pestaña
       const pdfBlobUrl = doc.output('bloburl');
       window.open(pdfBlobUrl, '_blank');
     } else {
-      // Guarda directamente el archivo
       doc.save(`Reporte-anomalias_${getNombreCultivo()}_${reporte.variable}.pdf`);
     }
   };
@@ -303,7 +297,6 @@ function KNN() {
   const opcionesGrafica = { 
     responsive: true, 
     maintainAspectRatio: false, 
-    // Aseguramos que la animación se complete para que la captura sea perfecta
     animation: { duration: 0 }, 
     plugins: { legend: { display: false } },
     scales: { y: { title: { display: true, text: `Escala (${reporte?.variable})`, font: { weight: 'bold' } } } }
@@ -381,7 +374,6 @@ function KNN() {
               {loading ? "⏳ Procesando Muestras..." : "🔍 Iniciar Análisis Computacional"}
             </button>
             
-            {/* BOTONES ACTUALIZADOS PARA PDF */}
             {reporte && (
               <div style={{ display: "flex", gap: "10px" }}>
                 <button onClick={() => generarPDF(true)} className="btn" style={{ backgroundColor: "#0288d1", color: "white" }}>
