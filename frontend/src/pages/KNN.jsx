@@ -262,6 +262,7 @@ function KNN() {
       doc.text(`F1-Score: ${reporte.metricas.f1_score}%`, 110, currentY);
       currentY += 10;
 
+      // MODIFICACIÓN DE SEGURIDAD PARA EL PDF: Usamos encadenamiento opcional para evitar colapsos
       if (reporte.metricas.matriz_confusion) {
         doc.setFontSize(11);
         doc.setFont("helvetica", "bold");
@@ -273,8 +274,8 @@ function KNN() {
           startY: currentY,
           head: [['', 'Predicción: Anomalía', 'Predicción: Normal']],
           body: [
-            ['Real: Anomalía', `${mc[0][0]} (Verdaderos Positivos)`, `${mc[0][1]} (Falsos Negativos)`],
-            ['Real: Normal', `${mc[1][0]} (Falsos Positivos)`, `${mc[1][1]} (Verdaderos Negativos)`]
+            ['Real: Anomalía', `${mc?.[0]?.[0] ?? 0} (Verdaderos Positivos)`, `${mc?.[0]?.[1] ?? 0} (Falsos Negativos)`],
+            ['Real: Normal', `${mc?.[1]?.[0] ?? 0} (Falsos Positivos)`, `${mc?.[1]?.[1] ?? 0} (Verdaderos Negativos)`]
           ],
           theme: 'grid',
           styles: { fontSize: 9, halign: 'center' },
@@ -579,15 +580,17 @@ function KNN() {
                             <td style={{ backgroundColor: "#f1f5f9", fontWeight: "bold", color: "#334155", padding: "10px" }}>
                               Anomalía
                             </td>
+                            {/* MODIFICACIÓN DE SEGURIDAD AQUÍ */}
                             <td style={{ border: "1px solid #cbd5e1", padding: "10px", backgroundColor: "#f0fdf4" }}>
                               <strong style={{ color: "#16a34a", fontSize: "1.2em", display: "block" }}>
-                                {reporte.metricas.matriz_confusion[0][0]}
+                                {reporte.metricas.matriz_confusion?.[0]?.[0] ?? 0}
                               </strong>
                               <span style={{ fontSize: "10px", color: "#15803d" }}>Verdaderos Positivos</span>
                             </td>
+                            {/* MODIFICACIÓN DE SEGURIDAD AQUÍ */}
                             <td style={{ border: "1px solid #cbd5e1", padding: "10px", backgroundColor: "#fef2f2" }}>
                               <strong style={{ color: "#dc2626", fontSize: "1.2em", display: "block" }}>
-                                {reporte.metricas.matriz_confusion[0][1]}
+                                {reporte.metricas.matriz_confusion?.[0]?.[1] ?? 0}
                               </strong>
                               <span style={{ fontSize: "10px", color: "#b91c1c" }}>Falsos Negativos</span>
                             </td>
@@ -596,15 +599,17 @@ function KNN() {
                             <td style={{ backgroundColor: "#f1f5f9", fontWeight: "bold", color: "#334155", padding: "10px" }}>
                               Normal
                             </td>
+                            {/* MODIFICACIÓN DE SEGURIDAD AQUÍ */}
                             <td style={{ border: "1px solid #cbd5e1", padding: "10px", backgroundColor: "#fef2f2" }}>
                               <strong style={{ color: "#dc2626", fontSize: "1.2em", display: "block" }}>
-                                {reporte.metricas.matriz_confusion[1][0]}
+                                {reporte.metricas.matriz_confusion?.[1]?.[0] ?? 0}
                               </strong>
                               <span style={{ fontSize: "10px", color: "#b91c1c" }}>Falsos Positivos</span>
                             </td>
+                            {/* MODIFICACIÓN DE SEGURIDAD AQUÍ */}
                             <td style={{ border: "1px solid #cbd5e1", padding: "10px", backgroundColor: "#f0fdf4" }}>
                               <strong style={{ color: "#16a34a", fontSize: "1.2em", display: "block" }}>
-                                {reporte.metricas.matriz_confusion[1][1]}
+                                {reporte.metricas.matriz_confusion?.[1]?.[1] ?? 0}
                               </strong>
                               <span style={{ fontSize: "10px", color: "#15803d" }}>Verdaderos Negativos</span>
                             </td>
