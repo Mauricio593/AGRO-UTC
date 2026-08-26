@@ -429,7 +429,7 @@ function KNN() {
         <div className="header-container">
           <h3>🔍 ANOMALIAS </h3>
           <p style={{ color: "#64748b", marginTop: "5px", marginBottom: 0 }}>
-            Análisis matemático multidimensional mediante vecinos más cercanos (KNN) para la detección de incongruencias.
+            Deteccion de anomalias mediente el uso de knn -vecinos mas secanos.
           </p>
         </div>
 
@@ -449,14 +449,14 @@ function KNN() {
             </div>
 
             <div className="filter-item">
-              <label className="form-label">2. Lote/Unidad:</label>
+              <label className="form-label">2. mes/variedad:</label>
               <select 
                 className="form-input" 
                 value={filtros.loteId} 
                 disabled={!filtros.cultivoId}
                 onChange={e => setFiltros({ ...filtros, loteId: e.target.value, anio: "", variable: "" })}
               >
-                <option value="">-- Seleccione Lote --</option>
+                <option value="">-- mes/variedad --</option>
                 {listas.lotes.map(l => <option key={l.id} value={l.id}>{l.nombre}</option>)}
               </select>
             </div>
@@ -620,7 +620,7 @@ function KNN() {
             {listaAnomaliasDetalladas.length > 0 && (
               <div className="anomaly-diagnostic-panel">
                 <div className="diagnostic-card">
-                  <h4>⚠️ Diagnóstico Técnico de Variabilidad Agronómica</h4>
+                  <h4>⚠️ Diagnóstico Técnico </h4>
                   <ul className="diagnostic-list">
                     {listaAnomaliasDetalladas.map((item, index) => (
                       <li key={index}>
