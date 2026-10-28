@@ -430,7 +430,7 @@ function KNN() {
         <div className="header-container">
           <h3>🔍 ANOMALIAS </h3>
           <p style={{ color: "#64748b", marginTop: "5px", marginBottom: 0 }}>
-            Deteccion de anomalias mediente el uso de knn -vecinos mas sercanos.
+            DETECCION DE ANOMALIAS CON KNN  "K-VECINOS-CERCANOS".
           </p>
         </div>
 
