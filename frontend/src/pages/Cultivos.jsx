@@ -21,6 +21,7 @@ function Cultivos() {
   });
 
   const cargarCultivos = () => API.get("cultivos/").then(res => setListas(p => ({ ...p, cultivos: res.data })));
+  const cargarVariables = () => API.get("variables/").then(res => setListas(p => ({ ...p, variables: res.data })));
   
   const cargarLotes = (cultivoId) => {
     if (!cultivoId) return setListas(p => ({ ...p, lotes: [] }));
@@ -32,32 +33,24 @@ function Cultivos() {
     API.get(`experimentos/?unidad=${loteId}`).then(res => setListas(p => ({ ...p, experimentos: res.data })));
   };
 
-  // NUEVO: Función para cargar solo las variables del experimento (año) seleccionado
-  const cargarVariablesPorExperimento = (experimentoId) => {
-    if (!experimentoId) return setListas(p => ({ ...p, variables: [] }));
-    API.get(`variables/?experimento=${experimentoId}`).then(res => setListas(p => ({ ...p, variables: res.data })));
-  };
+  useEffect(() => { cargarCultivos(); cargarVariables(); }, []);
 
-  // MODIFICADO: Ya no carga todas las variables al inicio
-  useEffect(() => { cargarCultivos(); }, []);
-
-  // MODIFICADO: Limpia también la variable al cambiar el cultivo
   useEffect(() => {
     cargarLotes(sel.cultivo);
+    // MODIFICADO: Se limpia también la variable
     setSel(p => ({ ...p, lote: "", experimento: "", variable: "" }));
     setMostrarForm(false);
   }, [sel.cultivo]);
 
-  // MODIFICADO: Limpia también la variable al cambiar el lote (mes)
   useEffect(() => {
     cargarExperimentos(sel.lote);
+    // MODIFICADO: Se limpia también la variable
     setSel(p => ({ ...p, experimento: "", variable: "" }));
     setMostrarForm(false);
   }, [sel.lote]);
 
-  // NUEVO: Efecto que reacciona cuando cambia el experimento (año)
+  // NUEVO: Efecto para limpiar la variable si se cambia el año (experimento)
   useEffect(() => {
-    cargarVariablesPorExperimento(sel.experimento);
     setSel(p => ({ ...p, variable: "" }));
     setMostrarForm(false);
   }, [sel.experimento]);
@@ -66,8 +59,7 @@ function Cultivos() {
     if (tipo === 'cultivo') cargarCultivos();
     if (tipo === 'lote') cargarLotes(sel.cultivo);
     if (tipo === 'experimento') cargarExperimentos(sel.lote);
-    // MODIFICADO: Refresca las variables usando el experimento actual
-    if (tipo === 'variable') cargarVariablesPorExperimento(sel.experimento);
+    if (tipo === 'variable') cargarVariables();
   };
 
   const manejarCambioInput = (e) => {
@@ -155,11 +147,7 @@ function Cultivos() {
       } else {
         if (tipo === 'cultivo') { endpoint = accion === 'agregar' ? "cultivos/" : `cultivos/${id}/`; payload = { nombre: valorPuro }; }
         if (tipo === 'lote') { endpoint = accion === 'agregar' ? "unidades/" : `unidades/${id}/`; payload = { nombre: valorPuro, cultivo: sel.cultivo }; }
-        // MODIFICADO: Agrega la asociación de la variable con el experimento actual (año) si el backend lo requiere
-        if (tipo === 'variable') { 
-          endpoint = accion === 'agregar' ? "variables/" : `variables/${id}/`; 
-          payload = { nombre: valorPuro, experimento: sel.experimento }; // <--- Verifica si tu backend necesita esto al crear una variable
-        }
+        if (tipo === 'variable') { endpoint = accion === 'agregar' ? "variables/" : `variables/${id}/`; payload = { nombre: valorPuro }; }
       }
     }
 
@@ -266,10 +254,16 @@ function Cultivos() {
           <div className="filter-box-vertical">
             <label>Variable a Medir:</label>
             <div className="select-row">
-              <select value={sel.variable} disabled={!sel.experimento} onChange={(e) => setSel({...sel, variable: e.target.value})} onContextMenu={(e) => handleRightClick(e, "variable", sel.variable)}>
+              {/* MODIFICADO: Se bloquea si no hay experimento seleccionado */}
+              <select 
+                value={sel.variable} 
+                disabled={!sel.experimento} 
+                onChange={(e) => setSel({...sel, variable: e.target.value})} 
+                onContextMenu={(e) => handleRightClick(e, "variable", sel.variable)}>
                 <option value="">Seleccione...</option>
                 {listas.variables.map(v => <option key={v.id} value={v.id}>{v.nombre}</option>)}
               </select>
+              {/* MODIFICADO: Se bloquea si no hay experimento seleccionado */}
               <button onClick={() => abrirModalAgregar('variable')} disabled={!sel.experimento} title="Añadir">+</button>
             </div>
           </div>
@@ -281,6 +275,7 @@ function Cultivos() {
 
       </div>
 
+      {/* Menús y modales se mantienen intactos */}
       {menuContext.visible && (
         <div className="floating-context-menu" style={{ top: menuContext.y, left: menuContext.x }} onClick={(e) => e.stopPropagation()}>
           <div className="context-option-row" onClick={abrirModalEditar}><span>✏️ Editar {menuContext.tipo}</span></div>
