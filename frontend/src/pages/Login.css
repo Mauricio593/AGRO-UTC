@@ -163,3 +163,44 @@
     padding: 40px 30px;
   }
 }
+/* --- ESTILOS DE LA PANTALLA DE CARGA --- */
+.login-card {
+  position: relative; /* Asegura que la capa se mantenga dentro de la tarjeta */
+  overflow: hidden;
+}
+
+.loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.85); /* Fondo blanco semi-transparente */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 10; /* Para que quede por encima del formulario */
+}
+
+.loading-overlay p {
+  margin-top: 15px;
+  font-weight: bold;
+  color: #0277bd;
+  font-size: 16px;
+}
+
+/* Animación del círculo de carga */
+.spinner {
+  width: 50px;
+  height: 50px;
+  border: 5px solid #e0e0e0;
+  border-top-color: #0277bd; /* Color principal de la marca */
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
