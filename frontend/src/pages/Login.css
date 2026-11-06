@@ -163,39 +163,37 @@
     padding: 40px 30px;
   }
 }
-/* --- ESTILOS DE LA PANTALLA DE CARGA --- */
-.login-card {
-  position: relative; /* Asegura que la capa se mantenga dentro de la tarjeta */
-  overflow: hidden;
-}
 
+/* =========================================
+   NUEVO: ESTILOS DE LA PANTALLA DE CARGA 
+   ========================================= */
 .loading-overlay {
-  position: absolute;
+  position: fixed; /* Cubre toda la pantalla */
   top: 0;
   left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(255, 255, 255, 0.85); /* Fondo blanco semi-transparente */
+  width: 100vw;
+  height: 100vh;
+  background: rgba(255, 255, 255, 0.9); /* Fondo semi-transparente */
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  z-index: 10; /* Para que quede por encima del formulario */
+  z-index: 9999; /* Asegura que tape todo el contenido */
 }
 
 .loading-overlay p {
-  margin-top: 15px;
-  font-weight: bold;
-  color: #0277bd;
-  font-size: 16px;
+  margin-top: 20px;
+  font-weight: 700;
+  color: #1976d2; /* Azul UTC para que combine */
+  font-size: 18px;
+  font-family: 'Nunito', sans-serif;
 }
 
-/* Animación del círculo de carga */
 .spinner {
-  width: 50px;
-  height: 50px;
-  border: 5px solid #e0e0e0;
-  border-top-color: #0277bd; /* Color principal de la marca */
+  width: 60px;
+  height: 60px;
+  border: 6px solid #e2e8f0;
+  border-top-color: #1976d2; /* Azul UTC */
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }
