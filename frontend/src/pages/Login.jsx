@@ -122,7 +122,7 @@ function Login() {
       {isLoading && (
         <div className="loading-overlay">
           <div className="spinner"></div>
-          <p>{isRegistering ? "Registrando usuario..." : "Iniciando sistema..."}</p>
+          <p>{isRegistering ? "Registrando usuario..." : "Cargando sistema Esperar..."}</p>
         </div>
       )}
 
