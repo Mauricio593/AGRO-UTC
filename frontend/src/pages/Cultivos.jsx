@@ -21,7 +21,6 @@ function Cultivos() {
   });
 
   const cargarCultivos = () => API.get("cultivos/").then(res => setListas(p => ({ ...p, cultivos: res.data })));
-  const cargarVariables = () => API.get("variables/").then(res => setListas(p => ({ ...p, variables: res.data })));
   
   const cargarLotes = (cultivoId) => {
     if (!cultivoId) return setListas(p => ({ ...p, lotes: [] }));
@@ -33,25 +32,42 @@ function Cultivos() {
     API.get(`experimentos/?unidad=${loteId}`).then(res => setListas(p => ({ ...p, experimentos: res.data })));
   };
 
-  useEffect(() => { cargarCultivos(); cargarVariables(); }, []);
+  // NUEVO: Función para cargar solo las variables del experimento (año) seleccionado
+  const cargarVariablesPorExperimento = (experimentoId) => {
+    if (!experimentoId) return setListas(p => ({ ...p, variables: [] }));
+    API.get(`variables/?experimento=${experimentoId}`).then(res => setListas(p => ({ ...p, variables: res.data })));
+  };
 
+  // MODIFICADO: Ya no carga todas las variables al inicio
+  useEffect(() => { cargarCultivos(); }, []);
+
+  // MODIFICADO: Limpia también la variable al cambiar el cultivo
   useEffect(() => {
     cargarLotes(sel.cultivo);
-    setSel(p => ({ ...p, lote: "", experimento: "" }));
+    setSel(p => ({ ...p, lote: "", experimento: "", variable: "" }));
     setMostrarForm(false);
   }, [sel.cultivo]);
 
+  // MODIFICADO: Limpia también la variable al cambiar el lote (mes)
   useEffect(() => {
     cargarExperimentos(sel.lote);
-    setSel(p => ({ ...p, experimento: "" }));
+    setSel(p => ({ ...p, experimento: "", variable: "" }));
     setMostrarForm(false);
   }, [sel.lote]);
+
+  // NUEVO: Efecto que reacciona cuando cambia el experimento (año)
+  useEffect(() => {
+    cargarVariablesPorExperimento(sel.experimento);
+    setSel(p => ({ ...p, variable: "" }));
+    setMostrarForm(false);
+  }, [sel.experimento]);
 
   const refrescarLista = (tipo) => {
     if (tipo === 'cultivo') cargarCultivos();
     if (tipo === 'lote') cargarLotes(sel.cultivo);
     if (tipo === 'experimento') cargarExperimentos(sel.lote);
-    if (tipo === 'variable') cargarVariables();
+    // MODIFICADO: Refresca las variables usando el experimento actual
+    if (tipo === 'variable') cargarVariablesPorExperimento(sel.experimento);
   };
 
   const manejarCambioInput = (e) => {
@@ -139,7 +155,11 @@ function Cultivos() {
       } else {
         if (tipo === 'cultivo') { endpoint = accion === 'agregar' ? "cultivos/" : `cultivos/${id}/`; payload = { nombre: valorPuro }; }
         if (tipo === 'lote') { endpoint = accion === 'agregar' ? "unidades/" : `unidades/${id}/`; payload = { nombre: valorPuro, cultivo: sel.cultivo }; }
-        if (tipo === 'variable') { endpoint = accion === 'agregar' ? "variables/" : `variables/${id}/`; payload = { nombre: valorPuro }; }
+        // MODIFICADO: Agrega la asociación de la variable con el experimento actual (año) si el backend lo requiere
+        if (tipo === 'variable') { 
+          endpoint = accion === 'agregar' ? "variables/" : `variables/${id}/`; 
+          payload = { nombre: valorPuro, experimento: sel.experimento }; // <--- Verifica si tu backend necesita esto al crear una variable
+        }
       }
     }
 
@@ -246,11 +266,11 @@ function Cultivos() {
           <div className="filter-box-vertical">
             <label>Variable a Medir:</label>
             <div className="select-row">
-              <select value={sel.variable} onChange={(e) => setSel({...sel, variable: e.target.value})} onContextMenu={(e) => handleRightClick(e, "variable", sel.variable)}>
+              <select value={sel.variable} disabled={!sel.experimento} onChange={(e) => setSel({...sel, variable: e.target.value})} onContextMenu={(e) => handleRightClick(e, "variable", sel.variable)}>
                 <option value="">Seleccione...</option>
                 {listas.variables.map(v => <option key={v.id} value={v.id}>{v.nombre}</option>)}
               </select>
-              <button onClick={() => abrirModalAgregar('variable')} title="Añadir">+</button>
+              <button onClick={() => abrirModalAgregar('variable')} disabled={!sel.experimento} title="Añadir">+</button>
             </div>
           </div>
 
