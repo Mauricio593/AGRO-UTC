@@ -17,6 +17,9 @@ function VariableForm({
   // Estado para manejar los mensajes de éxito y error en la interfaz
   const [mensajeSistema, setMensajeSistema] = useState({ texto: "", tipo: "" });
   
+  // Estado para controlar la advertencia previa antes de auto-completar con ceros
+  const [advertenciaCamposVacios, setAdvertenciaCamposVacios] = useState(false);
+  
   const [plantas, setPlantas] = useState([
     { id: 1, valores: Array(10).fill("") },
     { id: 2, valores: Array(10).fill("") },
@@ -41,7 +44,7 @@ function VariableForm({
     setMensajeSistema({ texto, tipo });
     setTimeout(() => {
       setMensajeSistema({ texto: "", tipo: "" });
-    }, 5000);
+    }, 6000);
   };
 
   const cargarDatos = async () => {
@@ -89,6 +92,7 @@ function VariableForm({
   const handleTratamientoChange = (e) => {
     const valor = e.target.value;
     setErrorTratamiento("");
+    setAdvertenciaCamposVacios(false);
     setTratamiento(valor);
   };
 
@@ -97,20 +101,13 @@ function VariableForm({
       const nuevasPlantas = [...plantas];
       nuevasPlantas[plantaIndex].valores[repIndex] = val;
       setPlantas(nuevasPlantas);
-    }
-  };
-
-  // Función para rellenar con cero si se deja una casilla vacía al salir del campo (onBlur)
-  const handleValorBlur = (plantaIndex, repIndex) => {
-    const nuevasPlantas = [...plantas];
-    if (nuevasPlantas[plantaIndex].valores[repIndex] === "") {
-      nuevasPlantas[plantaIndex].valores[repIndex] = "0";
-      setPlantas(nuevasPlantas);
+      setAdvertenciaCamposVacios(false); // Reiniciar advertencia si el usuario modifica valores
     }
   };
 
   const agregarPlanta = () => {
     setPlantas([...plantas, { id: plantas.length + 1, valores: Array(10).fill("") }]);
+    setAdvertenciaCamposVacios(false);
   };
 
   const calcularPromediosPorRepeticion = () => {
@@ -139,14 +136,26 @@ function VariableForm({
       return mostrarMensaje("⚠️ Ingresa el nombre del tratamiento para continuar.", "error"); 
     }
 
-    // 2. Auto-completar celdas vacías con "0" en caso de que hayan quedado espacios sin llenar
+    // 2. Verificar si existen celdas vacías en la tabla
+    const hayCamposVacios = plantas.some(planta => planta.valores.some(v => v === ""));
+
+    // 3. Si hay campos vacíos y aún no se ha advertido al usuario, mostrar aviso y detener el guardado
+    if (hayCamposVacios && !advertenciaCamposVacios) {
+      setAdvertenciaCamposVacios(true);
+      return mostrarMensaje(
+        "⚠️ Tienes campos vacíos en la tabla. Rellénalos con tus mediciones o presiona 'Guardar Formulario' de nuevo para completarlos automáticamente con ceros (0).",
+        "error"
+      );
+    }
+
+    // 4. Si el usuario reconfirma o no hay casillas vacías, auto-completar los vacíos con "0"
     const plantasActualizadas = plantas.map(planta => ({
       ...planta,
       valores: planta.valores.map(v => (v === "" ? "0" : v))
     }));
     setPlantas(plantasActualizadas);
 
-    // Recalcular promedios tras asegurar ceros en las casillas vacías
+    // Recalcular promedios finales tras asegurar los ceros
     const promediosCalculados = Array(10).fill("");
     for (let repIndex = 0; repIndex < 10; repIndex++) {
       let suma = 0;
@@ -159,11 +168,6 @@ function VariableForm({
         }
       });
       if (cantidad > 0) promediosCalculados[repIndex] = (suma / cantidad).toFixed(2);
-    }
-
-    const hayDatos = promediosCalculados.some(p => p !== "");
-    if (!hayDatos) {
-      return mostrarMensaje("⚠️ Todos los campos deben estar rellenos. Se han completado los vacíos con ceros, intenta guardar nuevamente.", "error"); 
     }
 
     setCargando(true);
@@ -196,6 +200,7 @@ function VariableForm({
       await Promise.all(promesasGuardado);
       
       mostrarMensaje("✅ ¡Promedios guardados con éxito!", "exito");
+      setAdvertenciaCamposVacios(false);
       limpiarCampos(); 
       cargarDatos(); 
     } catch (error) {
@@ -377,6 +382,7 @@ function VariableForm({
   const limpiarCampos = () => {
     setTratamiento("");
     setErrorTratamiento(""); 
+    setAdvertenciaCamposVacios(false);
     setPlantas([
       { id: 1, valores: Array(10).fill("") },
       { id: 2, valores: Array(10).fill("") },
@@ -458,7 +464,6 @@ function VariableForm({
                       step="0.01" 
                       value={valor} 
                       onChange={(e) => handleValorChange(pIndex, rIndex, e.target.value)} 
-                      onBlur={() => handleValorBlur(pIndex, rIndex)}
                       style={{ width: "100%", padding: "4px", boxSizing: "border-box", textAlign: "center", border: "1px solid #ccc", borderRadius: "3px" }} 
                     />
                   </td>
