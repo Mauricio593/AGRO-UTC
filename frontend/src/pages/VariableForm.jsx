@@ -100,6 +100,15 @@ function VariableForm({
     }
   };
 
+  // Función para rellenar con cero si se deja una casilla vacía al salir del campo (onBlur)
+  const handleValorBlur = (plantaIndex, repIndex) => {
+    const nuevasPlantas = [...plantas];
+    if (nuevasPlantas[plantaIndex].valores[repIndex] === "") {
+      nuevasPlantas[plantaIndex].valores[repIndex] = "0";
+      setPlantas(nuevasPlantas);
+    }
+  };
+
   const agregarPlanta = () => {
     setPlantas([...plantas, { id: plantas.length + 1, valores: Array(10).fill("") }]);
   };
@@ -124,14 +133,37 @@ function VariableForm({
   const promediosActuales = calcularPromediosPorRepeticion();
 
   const guardarDatosPromediados = async () => {
+    // 1. Validar nombre del tratamiento
     if (!tratamiento.trim()) {
       setErrorTratamiento("⚠️ Por favor, ingresa el nombre del tratamiento.");
-      return; 
+      return mostrarMensaje("⚠️ Ingresa el nombre del tratamiento para continuar.", "error"); 
     }
-    
-    const hayDatos = promediosActuales.some(p => p !== "");
+
+    // 2. Auto-completar celdas vacías con "0" en caso de que hayan quedado espacios sin llenar
+    const plantasActualizadas = plantas.map(planta => ({
+      ...planta,
+      valores: planta.valores.map(v => (v === "" ? "0" : v))
+    }));
+    setPlantas(plantasActualizadas);
+
+    // Recalcular promedios tras asegurar ceros en las casillas vacías
+    const promediosCalculados = Array(10).fill("");
+    for (let repIndex = 0; repIndex < 10; repIndex++) {
+      let suma = 0;
+      let cantidad = 0;
+      plantasActualizadas.forEach(planta => {
+        const valor = planta.valores[repIndex];
+        if (valor !== "" && !isNaN(valor)) {
+          suma += parseFloat(valor);
+          cantidad++;
+        }
+      });
+      if (cantidad > 0) promediosCalculados[repIndex] = (suma / cantidad).toFixed(2);
+    }
+
+    const hayDatos = promediosCalculados.some(p => p !== "");
     if (!hayDatos) {
-      return mostrarMensaje("No hay datos para promediar. Ingresa valores en las tablas.", "error"); 
+      return mostrarMensaje("⚠️ Todos los campos deben estar rellenos. Se han completado los vacíos con ceros, intenta guardar nuevamente.", "error"); 
     }
 
     setCargando(true);
@@ -148,7 +180,7 @@ function VariableForm({
         tratamientoId = resNuevoTrat.data.id;
       }
 
-      const promesasGuardado = promediosActuales.map((promedio, index) => {
+      const promesasGuardado = promediosCalculados.map((promedio, index) => {
         if (promedio !== "") {
           return axios.post(
             "https://agro-utc.onrender.com/api/valores/",
@@ -420,7 +452,15 @@ function VariableForm({
                 <td style={{ padding: "8px", border: "1px solid #eee", fontWeight: "bold", color: "#424242" }}>Planta {planta.id}</td>
                 {planta.valores.map((valor, rIndex) => (
                   <td key={rIndex} style={{ padding: "4px", border: "1px solid #eee" }}>
-                    <input type="number" min="0" step="0.01" value={valor} onChange={(e) => handleValorChange(pIndex, rIndex, e.target.value)} style={{ width: "100%", padding: "4px", boxSizing: "border-box", textAlign: "center", border: "1px solid #ccc", borderRadius: "3px" }} />
+                    <input 
+                      type="number" 
+                      min="0" 
+                      step="0.01" 
+                      value={valor} 
+                      onChange={(e) => handleValorChange(pIndex, rIndex, e.target.value)} 
+                      onBlur={() => handleValorBlur(pIndex, rIndex)}
+                      style={{ width: "100%", padding: "4px", boxSizing: "border-box", textAlign: "center", border: "1px solid #ccc", borderRadius: "3px" }} 
+                    />
                   </td>
                 ))}
               </tr>
